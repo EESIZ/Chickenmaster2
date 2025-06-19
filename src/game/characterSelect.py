@@ -1,4 +1,5 @@
-from dice_system import DiceSystem
+from DiceSystem import DiceSystem
+from Playerstat import PlayerStats
 
 # 게임 시작 - 캐릭터 선택
 def characterSelection():
@@ -11,13 +12,17 @@ def characterSelection():
     choice = input("선택: ")
     
     if choice == "1":
-        return characterPresets["chef"].copy()
+        preset = characterPresets["chef"]
+        return PlayerStats(preset["cook"], preset["manage"], preset["service"], preset["stamina"], preset["tech"])
     elif choice == "2":
-        return characterPresets["businessman"].copy()
+        preset = characterPresets["businessman"]
+        return PlayerStats(preset["cook"], preset["manage"], preset["service"], preset["stamina"], preset["tech"])
     elif choice == "3":
-        return characterPresets["service_expert"].copy()
+        preset = characterPresets["service_expert"]
+        return PlayerStats(preset["cook"], preset["manage"], preset["service"], preset["stamina"], preset["tech"])
     elif choice == "0":
-        return characterPresets["testman"].copy()
+        preset = characterPresets["testman"]
+        return PlayerStats(preset["cook"], preset["manage"], preset["service"], preset["stamina"], preset["tech"])
     
 
 characterPresets = {

@@ -14,6 +14,6 @@ class DiceSystem:
             return dice
             
         # 기존 기능 (스탯 적용된 총합 반환)
-        statBonus = math.floor((playerStats[statType] / 20) * 100)
+        statBonus = math.floor((getattr(playerStats, statType) / 20) * 100)
         total = dice + statBonus
         return total
