@@ -58,4 +58,4 @@ characterPresets = {
 
 
 # 한 번만 실행되는 캐릭터 로딩
-playerStats = characterSelection()
+# playerStats = characterSelection()
