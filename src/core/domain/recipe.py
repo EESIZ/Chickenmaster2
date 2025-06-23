@@ -27,7 +27,6 @@ class Recipe:
     
     # 획득 방법 메타데이터
     acquired_from_event: bool = False  # 이벤트로 획득했는지
-    copied_from_competitor: bool = False  # 경쟁자로부터 카피했는지
     
     def __post_init__(self):
         """생성 후 유효성 검사"""
@@ -54,11 +53,18 @@ class Recipe:
         return self.is_research_complete()
     
     def calculate_final_quality(self, cooking_stat: int, ingredient_quality: int) -> int:
-        """최종 품질 계산 (요리 스탯 + 연구도 + 재료 품질 평균)"""
-        research_bonus = int(self.research_level.value)  # 연구도는 0~100
+        """최종 품질 계산 (기본 품질 + 요리 스탯 보너스 + 재료 품질 보너스)"""
+        # 요리 스탯 보너스: 스탯 10당 품질 1 증가
+        cooking_bonus = cooking_stat // 10
         
-        # 3가지 요소의 평균
-        final_quality = (self.base_quality + cooking_stat + research_bonus + ingredient_quality) // 4
+        # 연구도 보너스: 연구도 20%당 품질 1 증가
+        research_bonus = int(self.research_level.value) // 20
+        
+        # 재료 품질 보너스: 재료 품질 그대로 반영
+        ingredient_bonus = ingredient_quality
+        
+        # 최종 품질 = 기본 품질 + 모든 보너스의 합
+        final_quality = self.base_quality + cooking_bonus + research_bonus + ingredient_bonus
         return max(0, final_quality)
     
     def get_research_difficulty_modifier(self) -> float:
@@ -66,22 +72,10 @@ class Recipe:
         # 난이도가 높을수록 진행 속도가 느려짐
         return 1.0 / self.difficulty
     
-    def create_copy_for_competitor(self) -> 'Recipe':
-        """경쟁자 카피용 레시피 생성 (연구도 0)"""
-        return self._replace(
-            research_level=Progress(0),
-            copied_from_competitor=True
-        )
-    
     def get_display_info(self) -> str:
         """레시피 정보 문자열 반환"""
         status = "완료" if self.is_research_complete() else f"{self.research_level.value}%"
-        source = ""
-        
-        if self.acquired_from_event:
-            source = " (이벤트)"
-        elif self.copied_from_competitor:
-            source = " (카피)"
+        source = " (이벤트)" if self.acquired_from_event else ""
         
         return f"{self.name} - 연구: {status}, 난이도: {self.difficulty}{source}"
     

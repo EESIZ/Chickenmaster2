@@ -17,10 +17,8 @@ from .value_objects import Money
 class CompetitorStrategy(Enum):
     """경쟁자 전략 유형"""
     
-    PRICE_AGGRESSIVE = auto()  # 가격 공세형
-    QUALITY_FOCUSED = auto()  # 품질 집중형
-    MARKETING_HEAVY = auto()  # 마케팅 중시형
-    BALANCED = auto()  # 균형형
+    AGGRESSIVE = auto()  # 공격적 전략 (가격 인하, 마케팅 강화)
+    DEFENSIVE = auto()  # 방어적 전략 (품질 유지, 비용 절감)
 
 
 @dataclass(frozen=True)
@@ -28,7 +26,7 @@ class DelayedAction:
     """지연 실행 행동"""
     
     id: UUID
-    action_type: str  # 행동 유형
+    action_type: str  # 행동 유형 (가격 변경, 마케팅 등)
     target_turn: int  # 실행될 턴
     parameters: dict  # 행동 매개변수
     
@@ -54,7 +52,7 @@ class Competitor:
     # 지연 행동 큐
     delayed_actions: tuple[DelayedAction, ...]
     
-    # 파산 관련 (기본값이 있는 필드들은 마지막에)
+    # 파산 관련
     bankrupt_since: Optional[date] = None  # 파산 시작일
     
     def __post_init__(self):
@@ -139,10 +137,8 @@ class Competitor:
     def get_strategy_description(self) -> str:
         """전략 설명 반환"""
         strategy_descriptions = {
-            CompetitorStrategy.PRICE_AGGRESSIVE: "가격 공세형 - 저가 전략으로 시장 점유율 확대",
-            CompetitorStrategy.QUALITY_FOCUSED: "품질 집중형 - 고품질 제품으로 프리미엄 전략",
-            CompetitorStrategy.MARKETING_HEAVY: "마케팅 중시형 - 광고를 통한 인지도 확대",
-            CompetitorStrategy.BALANCED: "균형형 - 모든 영역에서 안정적인 성장"
+            CompetitorStrategy.AGGRESSIVE: "공격적 전략 - 가격 인하와 마케팅 강화로 시장 점유율 확대",
+            CompetitorStrategy.DEFENSIVE: "방어적 전략 - 품질 유지와 비용 절감으로 안정적 운영"
         }
         return strategy_descriptions.get(self.strategy, "알 수 없는 전략")
     

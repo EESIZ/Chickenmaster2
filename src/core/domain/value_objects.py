@@ -187,24 +187,19 @@ class Experience:
 class StatValue:
     """스탯 값 객체"""
     
-    base_value: int
-    experience: Experience
+    base_value: int  # 기본 스탯값
     
     def __post_init__(self):
         if self.base_value < 0:
             raise ValueError(f"스탯 값은 음수일 수 없습니다: {self.base_value}")
     
-    def add_experience(self, exp_gain: int) -> 'StatValue':
-        """경험치 추가 후 새로운 StatValue 반환"""
-        new_exp, level_ups = self.experience + exp_gain
-        new_base = self.base_value + level_ups
-        return StatValue(new_base, new_exp)
-    
-    def apply_fatigue_penalty(self, penalty_ratio: float) -> 'StatValue':
-        """피로 패널티 적용 (경험치는 유지)"""
-        penalized_value = int(self.base_value * penalty_ratio)
-        return StatValue(penalized_value, self.experience)
+    def apply_fatigue_penalty(self, fatigue_level: int) -> 'StatValue':
+        """피로도에 따른 페널티 적용 후 새로운 StatValue 반환"""
+        # 피로도 10당 스탯 1 감소
+        penalty = fatigue_level // 10
+        new_base = max(0, self.base_value - penalty)
+        return StatValue(base_value=new_base)
     
     def get_dice_bonus(self) -> int:
-        """다이스 보너스 = 스탯 값"""
-        return self.base_value
+        """주사위 굴림 보너스 계산 (스탯 10당 +1)"""
+        return self.base_value // 10

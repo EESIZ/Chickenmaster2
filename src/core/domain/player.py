@@ -88,27 +88,23 @@ class Player:
     
     def is_fatigued(self) -> bool:
         """피로도 경고 상태인지 확인 (체력의 50% 이상)"""
-        from constants import FATIGUE_WARN_RATIO
-        threshold = Percentage(self.stamina.base_value * FATIGUE_WARN_RATIO)
-        return self.fatigue.is_critical(threshold)
+        threshold = Percentage(self.stamina.base_value * 0.5)  # 50%
+        return self.fatigue >= threshold
     
     def is_critically_fatigued(self) -> bool:
         """피로도 위험 상태인지 확인 (체력의 90% 이상)"""
-        from constants import FATIGUE_CRITICAL_RATIO
-        threshold = Percentage(self.stamina.base_value * FATIGUE_CRITICAL_RATIO)
-        return self.fatigue.is_critical(threshold)
+        threshold = Percentage(self.stamina.base_value * 0.9)  # 90%
+        return self.fatigue >= threshold
     
     def is_knocked_out(self) -> bool:
         """피로도 기절 상태인지 확인 (체력의 100% 이상)"""
-        from constants import FATIGUE_SHUTDOWN_RATIO
-        threshold = Percentage(self.stamina.base_value * FATIGUE_SHUTDOWN_RATIO)
-        return self.fatigue.is_critical(threshold)
+        threshold = Percentage(self.stamina.base_value)  # 100%
+        return self.fatigue >= threshold
     
     def is_completely_exhausted(self) -> bool:
         """완전 탈진 상태인지 확인 (체력의 200% 이상, 행동 불가)"""
-        from constants import FATIGUE_KNOCKOUT_RATIO
-        threshold = Percentage(self.stamina.base_value * FATIGUE_KNOCKOUT_RATIO)
-        return self.fatigue.is_critical(threshold)
+        threshold = Percentage(self.stamina.base_value * 2)  # 200%
+        return self.fatigue >= threshold
     
     def get_effective_stats(self) -> 'PlayerEffectiveStats':
         """피로도를 반영한 실제 스탯 반환"""
@@ -132,6 +128,22 @@ class Player:
                 stamina=self.stamina,
             )
     
+    def calculate_happiness_change(self, profit: Money, fatigue_ratio: float) -> float:
+        """행복도 변화량 계산 (f(x) = 50 ± A√(|x-50|/k) (A=50, k=1))"""
+        base_change = 0.0
+        
+        # 피로도에 따른 변화
+        if fatigue_ratio >= 0.5:  # 50% 이상
+            base_change -= 50 * ((abs(fatigue_ratio - 0.5) / 1) ** 0.5)
+        
+        # 수익에 따른 변화
+        if profit.is_positive():  # 흑자
+            base_change += 50 * ((abs(profit.amount / 1_000_000) / 1) ** 0.5)
+        elif profit.is_negative():  # 적자
+            base_change -= 50 * ((abs(profit.amount / 1_000_000) / 1) ** 0.5)
+        
+        return base_change
+    
     def _replace(self, **changes) -> 'Player':
         """dataclass replace 메서드 래퍼"""
         from dataclasses import replace
@@ -141,15 +153,14 @@ class Player:
     def create_new(cls, name: str, initial_money: int = 1000000) -> 'Player':
         """새 플레이어 생성 팩토리 메서드"""
         from uuid import uuid4
-        from constants import INITIAL_STAT_VALUE
         
         # 기본 스탯들 생성 (초기값 + 경험치 0)
         base_exp = Experience(0)
-        cooking = StatValue(INITIAL_STAT_VALUE, base_exp)
-        management = StatValue(INITIAL_STAT_VALUE, base_exp)
-        service = StatValue(INITIAL_STAT_VALUE, base_exp)
-        tech = StatValue(INITIAL_STAT_VALUE, base_exp)
-        stamina = StatValue(INITIAL_STAT_VALUE, base_exp)
+        cooking = StatValue(1, base_exp)  # 기본값 1로 시작
+        management = StatValue(1, base_exp)
+        service = StatValue(1, base_exp)
+        tech = StatValue(1, base_exp)
+        stamina = StatValue(1, base_exp)
         
         # 첫 번째 매장 ID 생성 (실제 매장은 별도로 생성 필요)
         first_store_id = uuid4()

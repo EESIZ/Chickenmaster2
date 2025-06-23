@@ -6,30 +6,10 @@
 """
 
 from dataclasses import dataclass
-from enum import Enum, auto
 from uuid import UUID
 from typing import Optional
 
 from .value_objects import Money, Percentage
-
-
-class CustomerType(Enum):
-    """고객 유형"""
-    
-    BUDGET_CONSCIOUS = auto()  # 가격 민감형
-    QUALITY_SEEKER = auto()  # 품질 추구형
-    BRAND_LOYAL = auto()  # 브랜드 충성형
-    TRENDY = auto()  # 트렌드 민감형
-
-
-class CustomerMood(Enum):
-    """고객 기분 상태"""
-    
-    VERY_HAPPY = auto()  # 매우 만족
-    HAPPY = auto()  # 만족
-    NEUTRAL = auto()  # 보통
-    UNHAPPY = auto()  # 불만족
-    VERY_UNHAPPY = auto()  # 매우 불만족
 
 
 @dataclass(frozen=True)
@@ -38,15 +18,14 @@ class CustomerAI:
     
     id: UUID
     name: str
-    customer_type: CustomerType
     
     # 고객 특성
     price_sensitivity: float  # 가격 민감도 (0.0 ~ 1.0)
     quality_preference: float  # 품질 선호도 (0.0 ~ 1.0)
     brand_loyalty: float  # 브랜드 충성도 (0.0 ~ 1.0)
+    desire: Percentage  # 욕구 (0~100)
     
     # 현재 상태
-    mood: CustomerMood = CustomerMood.NEUTRAL
     last_purchase_store_id: Optional[UUID] = None
     
     def __post_init__(self):
@@ -110,41 +89,22 @@ class CustomerAI:
         ratio = awareness / market_average
         return min(100, ratio * 50)
     
-    def update_mood_after_purchase(self, satisfaction_level: float) -> 'CustomerAI':
-        """구매 후 기분 상태 업데이트"""
-        if satisfaction_level >= 90:
-            new_mood = CustomerMood.VERY_HAPPY
-        elif satisfaction_level >= 70:
-            new_mood = CustomerMood.HAPPY
-        elif satisfaction_level >= 50:
-            new_mood = CustomerMood.NEUTRAL
-        elif satisfaction_level >= 30:
-            new_mood = CustomerMood.UNHAPPY
-        else:
-            new_mood = CustomerMood.VERY_UNHAPPY
-        
-        return self._replace(mood=new_mood)
-    
     def record_purchase(self, store_id: UUID) -> 'CustomerAI':
-        """구매 기록 업데이트"""
-        return self._replace(last_purchase_store_id=store_id)
+        """구매 기록 업데이트 및 욕구 초기화"""
+        return self._replace(
+            last_purchase_store_id=store_id,
+            desire=Percentage(0)
+        )
     
-    def get_loyalty_bonus(self, store_id: UUID) -> float:
-        """브랜드 충성도 보너스 계산"""
-        if self.last_purchase_store_id == store_id:
-            return self.brand_loyalty * 20  # 최대 20점 보너스
-        return 0.0
+    def update_daily_desire(self, dice_value: int) -> 'CustomerAI':
+        """매일 욕구 업데이트 (Calldice의 값/10 만큼 증가)"""
+        desire_increase = Percentage(dice_value / 10)
+        new_desire = self.desire + desire_increase
+        return self._replace(desire=new_desire)
     
-    def get_mood_modifier(self) -> float:
-        """기분 상태에 따른 구매 확률 보정치"""
-        mood_modifiers = {
-            CustomerMood.VERY_HAPPY: 1.2,
-            CustomerMood.HAPPY: 1.1,
-            CustomerMood.NEUTRAL: 1.0,
-            CustomerMood.UNHAPPY: 0.9,
-            CustomerMood.VERY_UNHAPPY: 0.8,
-        }
-        return mood_modifiers.get(self.mood, 1.0)
+    def get_purchase_probability(self, market_share: Percentage) -> float:
+        """구매 확률 계산 ([욕구]% * [점유율]%)"""
+        return self.desire.as_ratio() * market_share.as_ratio()
     
     def _replace(self, **changes) -> 'CustomerAI':
         """dataclass replace 메서드 래퍼"""

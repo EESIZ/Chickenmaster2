@@ -20,6 +20,7 @@ class Store:
     id: UUID
     owner_id: UUID  # 플레이어 또는 경쟁자 ID
     name: str
+    is_first_store: bool  # 첫 번째 매장 여부
     
     # 매장 정보
     monthly_rent: Money  # 월 임대료
@@ -91,6 +92,8 @@ class Store:
     
     def assign_manager(self, manager_id: UUID) -> 'Store':
         """점장 배치 후 새로운 Store 반환"""
+        if self.is_first_store:
+            raise ValueError("첫 번째 매장에는 점장을 배치할 수 없습니다")
         return self._replace(manager_id=manager_id)
     
     def remove_manager(self) -> 'Store':
@@ -102,10 +105,8 @@ class Store:
         return self.manager_id is not None
     
     def can_operate(self) -> bool:
-        """매장 운영이 가능한지 확인 (점장이 있거나 첫 번째 매장)"""
-        # 실제 구현에서는 owner가 player인지 확인하는 로직이 필요
-        # 지금은 점장 존재 여부만 확인
-        return self.has_manager()
+        """매장 운영이 가능한지 확인 (첫 번째 매장이거나 점장이 있는 경우)"""
+        return self.is_first_store or self.has_manager()
     
     def get_daily_rent(self) -> Money:
         """일일 임대료 계산"""
@@ -129,7 +130,7 @@ class Store:
         return replace(self, **changes)
     
     @classmethod
-    def create_new(cls, name: str, owner_id: UUID, monthly_rent: int = 500000) -> 'Store':
+    def create_new(cls, name: str, owner_id: UUID, is_first_store: bool = True, monthly_rent: int = 500000) -> 'Store':
         """새 매장 생성 팩토리 메서드"""
         from uuid import uuid4
         
@@ -137,6 +138,7 @@ class Store:
             id=uuid4(),
             owner_id=owner_id,
             name=name,
+            is_first_store=is_first_store,
             monthly_rent=Money(monthly_rent),
             product_ids=(),
             inventory_item_ids=(),
