@@ -1,0 +1,52 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: This file defines the game design rules.
+---
+
+Documentation Guidelines
+Code Documentation
+All modules must have docstrings.
+
+Public APIs should have detailed docstrings.
+
+Including example code is recommended.
+
+Comments
+Omit comments when the code is self-explanatory.
+
+Add comments for complex logic.
+
+Comments should explain why something is done, not what is done.
+
+Documentation Structure
+Manage documentation under the docs/ directory.
+
+README.md should provide an overview of the project.
+
+Separate documentation for each module.
+
+API Documentation
+Document all public APIs.
+
+Describe parameters and return values.
+
+Specify exceptional cases and errors.
+
+Design Documentation
+Record architectural decisions.
+
+Document trade-offs and considerations.
+
+Keep track of changes over time.
+
+Documentation Maintenance
+Update relevant documentation when code changes.
+
+Regularly review and update documentation.
+
+Clean up outdated documentation.
+

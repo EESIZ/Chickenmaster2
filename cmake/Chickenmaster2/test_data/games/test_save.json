@@ -1,0 +1,58 @@
+{
+  "save_name": "test_save",
+  "save_time": "2025-06-26T16:14:18.089253",
+  "game_data": {
+    "player": {
+      "id": "7d1e8b63-8dd4-4f25-9d3f-46abc50d3160",
+      "name": "테스트 플레이어",
+      "cooking": {
+        "base_value": 16,
+        "_class_name": "StatValue",
+        "_module_name": "core.domain.value_objects"
+      },
+      "management": {
+        "base_value": 8,
+        "_class_name": "StatValue",
+        "_module_name": "core.domain.value_objects"
+      },
+      "service": {
+        "base_value": 12,
+        "_class_name": "StatValue",
+        "_module_name": "core.domain.value_objects"
+      },
+      "tech": {
+        "base_value": 14,
+        "_class_name": "StatValue",
+        "_module_name": "core.domain.value_objects"
+      },
+      "stamina": {
+        "base_value": 10,
+        "_class_name": "StatValue",
+        "_module_name": "core.domain.value_objects"
+      },
+      "fatigue": {
+        "value": 0,
+        "_class_name": "Percentage",
+        "_module_name": "core.domain.value_objects"
+      },
+      "happiness": {
+        "value": 50,
+        "_class_name": "Percentage",
+        "_module_name": "core.domain.value_objects"
+      },
+      "money": {
+        "amount": 1000000,
+        "_class_name": "Money",
+        "_module_name": "core.domain.value_objects"
+      },
+      "store_ids": [
+        "d718605a-2a86-45f1-98c1-f2131c6cbc8c"
+      ],
+      "research_ids": [],
+      "_class_name": "Player",
+      "_module_name": "core.domain.player"
+    },
+    "current_turn": 1,
+    "game_start_date": "2024-01-01"
+  }
+}

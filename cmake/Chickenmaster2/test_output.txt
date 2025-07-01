@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "C:\Project\Chickenmaster2\cmake\Chickenmaster2\test_action_service.py", line 522, in <module>
+    success = test_action_service()
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Project\Chickenmaster2\cmake\Chickenmaster2\test_action_service.py", line 27, in test_action_service
+    print("\U0001f9ea ActionService �׽�Ʈ ����")
+UnicodeEncodeError: 'cp949' codec can't encode character '\U0001f9ea' in position 0: illegal multibyte sequence
