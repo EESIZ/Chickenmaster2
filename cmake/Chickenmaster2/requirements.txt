@@ -1,3 +1,0 @@
-# Core runtime dependencies for ChickenMaster2
-# Currently only Python standard library is required.
-# Add packages here as the project grows. 
