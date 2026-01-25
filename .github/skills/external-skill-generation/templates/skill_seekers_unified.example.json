@@ -1,0 +1,73 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "_comment": "Example Skill Seekers unified output format. DO NOT commit actual scraped data.",
+    "metadata": {
+        "tool": "skill-seekers",
+        "version": "0.1.0",
+        "scraped_at": "2026-01-14T00:00:00Z",
+        "source_url": "https://docs.example.com/api/v1",
+        "library_name": "example-library",
+        "library_version": "1.0.0",
+        "license": "Apache-2.0",
+        "robots_txt_compliant": true
+    },
+    "sections": [
+        {
+            "title": "Getting Started",
+            "url": "https://docs.example.com/api/v1/getting-started",
+            "summary": "Brief summary of the section content",
+            "key_points": [
+                "Point 1: Installation instructions",
+                "Point 2: Basic usage pattern",
+                "Point 3: Common configuration options"
+            ],
+            "code_examples": [
+                {
+                    "language": "python",
+                    "description": "Basic initialization",
+                    "code": "from example import Client\nclient = Client(api_key='...')"
+                }
+            ],
+            "api_signatures": [
+                {
+                    "name": "Client.__init__",
+                    "signature": "def __init__(self, api_key: str, timeout: int = 30) -> None",
+                    "parameters": [
+                        {
+                            "name": "api_key",
+                            "type": "str",
+                            "required": true,
+                            "description": "API authentication key"
+                        },
+                        {
+                            "name": "timeout",
+                            "type": "int",
+                            "required": false,
+                            "default": 30,
+                            "description": "Request timeout in seconds"
+                        }
+                    ],
+                    "returns": "None",
+                    "raises": ["ValueError", "ConnectionError"]
+                }
+            ]
+        },
+        {
+            "title": "Advanced Usage",
+            "url": "https://docs.example.com/api/v1/advanced",
+            "summary": "Advanced configuration and optimization",
+            "key_points": [
+                "Point 1: Batch processing",
+                "Point 2: Error handling strategies",
+                "Point 3: Performance tuning"
+            ],
+            "code_examples": [],
+            "api_signatures": []
+        }
+    ],
+    "warnings": [
+        "This file is for reference only",
+        "DO NOT commit scraped data to version control",
+        "Manual review required before using content"
+    ]
+}

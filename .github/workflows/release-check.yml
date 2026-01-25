@@ -1,0 +1,242 @@
+# =============================================================================
+# Release Check Workflow
+# =============================================================================
+# Validates that the repository is clean and ready for release.
+# Checks for temporary files, validates structure, and ensures no secrets.
+# =============================================================================
+
+name: Release Check
+
+on:
+  push:
+    branches: [master, main]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  release-check:
+    name: Validate Release Readiness
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for temporary files
+        run: |
+          echo "Checking for temporary files that should not be committed..."
+          
+          ERRORS=0
+          
+          # Check for Python cache files
+          if find . -name "__pycache__" -type d | grep -q .; then
+            echo "❌ Found __pycache__ directories"
+            find . -name "__pycache__" -type d
+            ERRORS=$((ERRORS + 1))
+          fi
+          
+          if find . -name "*.pyc" -type f | grep -q .; then
+            echo "❌ Found .pyc files"
+            find . -name "*.pyc" -type f
+            ERRORS=$((ERRORS + 1))
+          fi
+          
+          # Check for pytest cache
+          if find . -name ".pytest_cache" -type d | grep -q .; then
+            echo "❌ Found .pytest_cache directories"
+            ERRORS=$((ERRORS + 1))
+          fi
+          
+          # Check for OS files
+          if find . -name ".DS_Store" -type f | grep -q .; then
+            echo "❌ Found .DS_Store files"
+            ERRORS=$((ERRORS + 1))
+          fi
+          
+          if find . -name "Thumbs.db" -type f | grep -q .; then
+            echo "❌ Found Thumbs.db files"
+            ERRORS=$((ERRORS + 1))
+          fi
+          
+          # Check for swap files
+          if find . -name "*.swp" -o -name "*.swo" | grep -q .; then
+            echo "❌ Found vim swap files"
+            ERRORS=$((ERRORS + 1))
+          fi
+          
+          # Check for backup files
+          if find . -name "*~" -type f | grep -q .; then
+            echo "❌ Found backup files (*~)"
+            ERRORS=$((ERRORS + 1))
+          fi
+          
+          if [ $ERRORS -gt 0 ]; then
+            echo ""
+            echo "Found $ERRORS issue(s). Please run 'scripts/release_prep.sh' before committing."
+            exit 1
+          fi
+          
+          echo "✅ No temporary files found"
+
+      - name: Check memory database is clean
+        run: |
+          echo "Checking that memory databases are clean..."
+          
+          # Check .copilot-memory/
+          if [ -f ".copilot-memory/memory.db" ]; then
+            echo "❌ Found .copilot-memory/memory.db"
+            echo "Please remove memory database before release."
+            exit 1
+          fi
+          
+          # Check logs/memory.json
+          if [ -f "logs/memory.json" ]; then
+            # Check if it has content (not empty)
+            if [ -s "logs/memory.json" ]; then
+              echo "❌ Found non-empty logs/memory.json"
+              exit 1
+            fi
+          fi
+          
+          echo "✅ Memory databases are clean"
+
+      - name: Validate directory structure
+        run: |
+          echo "Validating required directory structure..."
+          
+          REQUIRED_DIRS=(
+            "configs"
+            "configs/generated"
+            "documents"
+            "documents/notes"
+            "documents/issues"
+            "documents/final"
+            "documents/reference"
+            "documents/reference/papers"
+            "documents/reference/technical"
+            "logs"
+            "logs/slurm"
+            "results"
+            "scripts"
+            "scripts/slurm"
+            "src"
+            "src/data"
+            "src/experiments"
+            "src/utils"
+            "tests"
+            "tools"
+            "tools/agent_tools"
+            "tools/mcp_servers"
+          )
+          
+          MISSING=0
+          for dir in "${REQUIRED_DIRS[@]}"; do
+            if [ ! -d "$dir" ]; then
+              echo "❌ Missing directory: $dir"
+              MISSING=$((MISSING + 1))
+            fi
+          done
+          
+          if [ $MISSING -gt 0 ]; then
+            echo ""
+            echo "Missing $MISSING required directories."
+            exit 1
+          fi
+          
+          echo "✅ All required directories exist"
+
+      - name: Check for large files
+        run: |
+          echo "Checking for large files that should not be committed..."
+          
+          # Find files larger than 10MB
+          LARGE_FILES=$(find . -type f -size +10M -not -path "./.git/*" 2>/dev/null || true)
+          
+          if [ -n "$LARGE_FILES" ]; then
+            echo "❌ Found large files (>10MB):"
+            echo "$LARGE_FILES"
+            echo ""
+            echo "Large binary files should not be committed. Use Git LFS or .gitignore."
+            exit 1
+          fi
+          
+          # Check for model files
+          MODEL_PATTERNS="*.safetensors *.pt *.bin *.ckpt *.pth *.h5"
+          for pattern in $MODEL_PATTERNS; do
+            if find . -name "$pattern" -type f -not -path "./.git/*" | grep -q .; then
+              echo "❌ Found model files ($pattern)"
+              find . -name "$pattern" -type f -not -path "./.git/*"
+              exit 1
+            fi
+          done
+          
+          echo "✅ No large or model files found"
+
+      - name: Validate JSON files
+        run: |
+          echo "Validating JSON configuration files..."
+          
+          # Validate mcp.json if exists
+          if [ -f ".vscode/mcp.json" ]; then
+            if ! python3 -c "import json; json.load(open('.vscode/mcp.json'))" 2>/dev/null; then
+              echo "❌ Invalid JSON in .vscode/mcp.json"
+              exit 1
+            fi
+            echo "✅ .vscode/mcp.json is valid"
+          fi
+          
+          # Validate configs/*.yaml
+          if command -v python3 &> /dev/null; then
+            for file in configs/*.yaml; do
+              if [ -f "$file" ]; then
+                if ! python3 -c "import yaml; yaml.safe_load(open('$file'))" 2>/dev/null; then
+                  echo "❌ Invalid YAML in $file"
+                  exit 1
+                fi
+              fi
+            done
+            echo "✅ All YAML configs are valid"
+          fi
+
+      - name: Check for sensitive data patterns
+        run: |
+          echo "Checking for potential sensitive data..."
+          
+          # Patterns that might indicate secrets (simplified check)
+          PATTERNS=(
+            "PRIVATE_KEY"
+            "SECRET_KEY"
+            "API_KEY.*=.*['\"][a-zA-Z0-9]"
+            "password.*=.*['\"]"
+            "token.*=.*['\"][a-zA-Z0-9]"
+          )
+          
+          FOUND=0
+          for pattern in "${PATTERNS[@]}"; do
+            if grep -r -i -E "$pattern" --include="*.py" --include="*.yaml" --include="*.json" --include="*.sh" . 2>/dev/null | grep -v ".git" | grep -v "release-check.yml" | head -5; then
+              echo "⚠️  Potential sensitive data pattern found: $pattern"
+              FOUND=$((FOUND + 1))
+            fi
+          done
+          
+          if [ $FOUND -gt 0 ]; then
+            echo ""
+            echo "⚠️  Found $FOUND potential sensitive data patterns."
+            echo "Please review and ensure no actual secrets are committed."
+            # Warning only, don't fail
+          else
+            echo "✅ No obvious sensitive data patterns found"
+          fi
+
+      - name: Summary
+        run: |
+          echo ""
+          echo "=============================================="
+          echo "  Release Check Complete"
+          echo "=============================================="
+          echo "✅ All checks passed!"
+          echo ""
+          echo "The repository is ready for release."

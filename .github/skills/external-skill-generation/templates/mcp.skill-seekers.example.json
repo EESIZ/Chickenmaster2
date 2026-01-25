@@ -1,0 +1,27 @@
+{
+    "$schema": "https://json.schemastore.org/mcp.json",
+    "_comment": "Skill Seekers MCP server configuration example. Copy to .vscode/mcp.json and merge with existing config.",
+    "_instructions": [
+        "1. Install skill-seekers: uv tool install skill-seekers",
+        "2. Copy this config to your .vscode/mcp.json servers section",
+        "3. Restart VS Code to load the new MCP server",
+        "4. Output will be restricted to temp/skill_seekers/"
+    ],
+    "servers": {
+        "skill-seekers": {
+            "type": "stdio",
+            "command": "uvx",
+            "args": [
+                "--from",
+                "skill-seekers",
+                "skill-seekers"
+            ],
+            "env": {
+                "SKILL_SEEKERS_OUTPUT_DIR": "${workspaceFolder}/temp/skill_seekers",
+                "SKILL_SEEKERS_DEFAULT_FORMAT": "unified",
+                "SKILL_SEEKERS_MAX_DEPTH": "2",
+                "SKILL_SEEKERS_RESPECT_ROBOTS": "true"
+            }
+        }
+    }
+}

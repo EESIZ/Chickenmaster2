@@ -1,0 +1,102 @@
+{
+    "editor.formatOnSave": true,
+    // Ruff Configuration (Astral Software)
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit"
+        }
+    },
+    // Pylance Performance Optimization
+    "python.analysis.typeCheckingMode": "off", // Disable heavy type checking (rely on Ruff)
+    "python.analysis.diagnosticMode": "openFilesOnly", // Analyze only open files, not the whole workspace
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.inlayHints.functionReturnTypes": false, // Disable expensive inlay hints
+    "python.analysis.inlayHints.variableTypes": false,
+    "python.analysis.indexing": true, // Keep indexing for navigation, but reduce analysis load
+    // Global exclusions
+    "files.exclude": {
+        "**/__pycache__": true,
+        "**/.pytest_cache": true,
+        "**/*.pyc": true
+    },
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
+        "**/node_modules/*/**": true,
+        "**/.venv/**": true,
+        "**/__pycache__/**": true,
+        "**/logs/**": true,
+        "**/results/**": true
+    },
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/.git": true,
+        "**/results": true,
+        "**/logs": true
+    },
+    // GitHub Copilot Configuration
+    "github.copilot.chat.codeGeneration.useInstructionFiles": true,
+    // Copilot Chat: enable AGENTS.md (for custom agents)
+    "chat.useAgentsMdFile": true,
+    // URL auto-approval for fetch tool (URL patterns to trust for automatic fetching)
+    "chat.tools.urls.autoApprove": {
+        "https://aclweb.org/**": true,
+        "https://aclanthology.org/**": true,
+        "https://arxiv.org/**": true,
+        "https://huggingface.co/**": true,
+        "https://pytorch.org/**": true
+    },
+    "chat.customAgentInSubagent.enabled": true,
+    "chat.tools.terminal.autoReplyToPrompts": true,
+    // Tool Auto-Approval Configuration
+    // Global auto-approve for all tools (use with caution)
+    // Terminal commands auto-approval (specific commands)
+    "chat.tools.terminal.autoApprove": {
+        "uv": true,
+        "python": true,
+        "squeue": true,
+        "sinfo": true,
+        "sacct": true,
+        "cat": true,
+        "ls": true,
+        "grep": true,
+        "git": false
+    },
+    // Agent mode settings (VS Code 1.99+)
+    "chat.agent.enabled": true,
+    "chat.agent.maxRequests": 10000,
+    "github.copilot.chat.agent.runTasks": true,
+    "github.copilot.chat.agent.autoFix": true,
+    // MCP Configuration
+    "chat.mcp.autostart": "onlyNew",
+    // Prompt & Instruction Files (Experimental)
+    "chat.promptFiles": true,
+    "chat.promptFilesLocations": {
+        ".github/prompts": true
+    },
+    "chat.instructionsFilesLocations": {
+        ".github": true,
+        "documents/reference/instructions": true
+    },
+    // Copilot Chat Features
+    "github.copilot.chat.anthropic.tools.websearch.maxUses": 10,
+    "github.copilot.chat.searchSubagent.enabled": true,
+    "github.copilot.chat.edits.gemini3MultiReplaceString": true,
+    "github.copilot.chat.anthropic.thinking.budgetTokens": 16384,
+    "github.copilot.chat.cli.customAgents.enabled": true,
+    "github.copilot.chat.cli.mcp.enabled": true,
+    "github.copilot.chat.codesearch.enabled": true,
+    // GitHub MCP Server: Remote toolsets only (local MCP servers are in .vscode/mcp.json)
+    // Available remote toolsets: "default" (issues, PRs, etc.)
+    // Local servers (slurm-agent-tools, memory, etc.) are auto-loaded from mcp.json
+    "github.copilot.chat.githubMcpServer.toolsets": [
+        "default"
+    ],
+    "github.copilot.chat.enableUserPreferences": false,
+    "github.copilot.chat.githubMcpServer.enabled": true,
+    "github.copilot.chat.responsesApiReasoningEffort": "high"
+    // Instruction files are loaded from chat.instructionsFilesLocations
+    // See: .github/copilot-instructions.md, .github/*.instructions.md
+}

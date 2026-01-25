@@ -1,0 +1,106 @@
+# Citation Tracer Default Configuration
+# Author: citation-tracer agent
+# Created: 2026-01-15
+
+# DFS Traversal Parameters
+max_depth: 4                    # Maximum citation chain depth
+branching_factor: 3             # Top-k citations per node
+min_relevance_score: 0.35       # Minimum score threshold for inclusion
+max_nodes: 121                  # Total node limit (1 + 3 + 9 + 27 + 81)
+
+# Timeout Settings
+timeout_per_request: 10.0       # Seconds per API request
+total_timeout: 600.0            # Total traversal timeout (10 minutes)
+
+# Rate Limiting
+rate_limit:
+  min_delay: 3.0                # Minimum seconds between API calls
+  backoff_multiplier: 2.0       # Exponential backoff multiplier
+  max_retries: 3                # Maximum retry attempts per request
+
+# API Providers (in priority order)
+api_providers:
+  - semantic_scholar
+  - crossref
+
+# Semantic Scholar API Configuration
+semantic_scholar:
+  base_url: "https://api.semanticscholar.org/graph/v1"
+  endpoints:
+    paper: "/paper/{paper_id}"
+    references: "/paper/{paper_id}/references"
+    citations: "/paper/{paper_id}/citations"
+  fields:
+    - paperId
+    - title
+    - authors
+    - year
+    - citationCount
+    - influentialCitationCount
+    - abstract
+    - externalIds
+  # Optional: Add API key for higher rate limits
+  # api_key: "${SEMANTIC_SCHOLAR_API_KEY}"
+
+# Crossref API Configuration
+crossref:
+  base_url: "https://api.crossref.org/works"
+  endpoints:
+    work: "/{doi}"
+  # Polite pool: Add contact email for better rate limits
+  contact_email: ""
+
+# Scoring Weights
+scoring_weights:
+  similarity: 0.5               # Semantic similarity to seed paper
+  influence: 0.3                # Normalized citation count
+  foundation: 0.2               # Depth-weighted foundation bonus
+
+# Influence Score Normalization
+influence_normalization:
+  method: "log_scale"           # log_scale | linear | percentile
+  min_citations: 1              # Minimum citation count (avoid log(0))
+  max_citations: 10000          # Cap for normalization
+
+# Foundation Score Parameters
+foundation_score:
+  depth_weight: 0.1             # Bonus per depth level
+  age_weight: 0.05              # Bonus per year of age (older = more foundational)
+  max_age_bonus: 0.3            # Maximum age bonus
+
+# Output Configuration
+output:
+  directory: "documents/reference/lineage"
+  json_enabled: true
+  markdown_enabled: true
+  filename_template: "{canonical_id_safe}_{timestamp}"
+  timestamp_format: "%Y%m%d_%H%M%S"
+
+# Graph Construction
+graph:
+  directed: true                # Citation graph is directed
+  allow_self_loops: false       # No self-citations
+  normalize_ids: true           # Apply canonical ID normalization
+  store_metadata: true          # Store full paper metadata in nodes
+
+# Canonical ID Priority
+canonical_id_priority:
+  - doi                         # Highest priority
+  - arxiv                       # Second priority
+  - corpus_id                   # Fallback
+
+# Logging
+logging:
+  level: "INFO"                 # DEBUG | INFO | WARNING | ERROR
+  log_api_calls: true           # Log each API request
+  log_scores: true              # Log relevance scores
+  progress_interval: 10         # Log progress every N nodes
+
+# Memory MCP Integration
+memory:
+  enabled: true
+  tags:
+    - citation
+    - lineage
+    - graph
+  memory_type: "citation_graph"

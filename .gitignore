@@ -1,8 +1,12 @@
-# Python
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+
+# C extensions
 *.so
+
+# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -16,16 +20,17 @@ parts/
 sdist/
 var/
 wheels/
-pip-wheel-metadata/
-share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
 
 # PyInstaller
 *.manifest
 *.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
 
 # Unit test / coverage reports
 htmlcov/
@@ -41,7 +46,11 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 
-# Virtual environments
+# Translations
+*.mo
+*.pot
+
+# Environments
 .env
 .venv
 env/
@@ -50,23 +59,90 @@ ENV/
 env.bak/
 venv.bak/
 
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
 # IDE
-.vscode/
 .idea/
 *.swp
 *.swo
 *~
+.project
+.pydevproject
+.settings/
+
+# VS Code (keep settings, exclude personal settings)
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/mcp.json
+!.vscode/tool-sets.jsonc
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
 
 # OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
-# Game specific
+# Project specific
+
+# Agent memory (local scratchpads, not for version control)
+documents/**/*.memory.md
+
+# MCP Memory storage (local knowledge graph)
+logs/memory.json
+.copilot-memory/memory.db
+.copilot-memory/memory.db-shm
+.copilot-memory/memory.db-wal
+
+# Agent tools cache
+.project_status_cache.json
+
+# Model checkpoints (large binary files)
+*.safetensors
+*.pt
+*.bin
+*.ckpt
+*.pth
+
+# Model checkpoint directories
+results/**/checkpoint-*/
+results/**/model/
+results/**/checkpoints/
+results/**/*.safetensors
+results/**/*.pt
+results/**/*.bin
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+temp/
+
+# Log files (keep SLURM logs)
 *.log
-saves/
-temp/ 
+!logs/slurm/**
+
+# Data files (keep resource/)
+*.csv
+*.parquet
+!resource/**
+
+# uv
+.uv/
+uv.lock

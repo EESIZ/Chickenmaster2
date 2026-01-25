@@ -1,0 +1,105 @@
+{
+    "servers": {
+        "slurm-agent-tools": {
+            "type": "stdio",
+            "command": "uv",
+            "args": [
+                "run",
+                "python",
+                "-m",
+                "tools.mcp_servers.slurm_agent_tools"
+            ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONUNBUFFERED": "1"
+            }
+        },
+        "tb-query": {
+            "type": "stdio",
+            "command": "uvx",
+            "args": [
+                "--from",
+                "tb-query",
+                "tb-query-mcp"
+            ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "TB_QUERY_EVENTS_PATH": "${workspaceFolder}/logs/tensorboard"
+            }
+        },
+        "arxiv-mcp-server": {
+            "type": "stdio",
+            "command": "uv",
+            "args": [
+                "tool",
+                "run",
+                "arxiv-mcp-server",
+                "--storage-path",
+                "${workspaceFolder}/documents/reference/papers"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        "context7": {
+            "type": "stdio",
+            "command": "npx",
+            "args": [
+                "-y",
+                "@upstash/context7-mcp@latest"
+            ]
+        },
+        "memory": {
+            "command": "uv",
+            "args": [
+            "tool",
+            "run",
+            "--from",
+            "mcp-memory-service",
+            "memory",
+            "server"
+            ],
+            "env": {
+            "MCP_MEMORY_STORAGE_BACKEND": "sqlite_vec",
+            "MCP_MEMORY_SQLITE_PATH": "${workspaceFolder}/.copilot-memory/memory.db",
+            "CUDA_VISIBLE_DEVICES": "",
+            "MCP_MEMORY_USE_ONNX": "1"
+            },
+            "type": "stdio"
+        },
+        "sequentialthinking": {
+            "type": "stdio",
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-sequential-thinking@latest"
+            ]
+        },
+        "gpu-monitor": {
+            "type": "stdio",
+            "command": "uv",
+            "args": [
+                "run",
+                "python",
+                "-m",
+                "tools.mcp_servers.gpu_monitor_server"
+            ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONUNBUFFERED": "1"
+            }
+        },
+        "wandb-analysis": {
+            "type": "stdio",
+            "command": "uv",
+            "args": [
+                "run",
+                "python",
+                "-m",
+                "tools.mcp_servers.wandb_analysis_server"
+            ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONUNBUFFERED": "1"
+            }
+        }
+    }
+}

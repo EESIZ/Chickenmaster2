@@ -1,0 +1,114 @@
+# Agent Policy Configuration
+# Defines safety guardrails and constraints for AI agents (Copilot, etc.)
+# operating this project.
+
+# ============================================================
+# Resource Limits
+# ============================================================
+limits:
+  # SLURM job limits
+  max_active_jobs: 4           # Max concurrent running jobs
+  max_pending_jobs: 8          # Max jobs in queue
+  max_daily_submissions: 50    # Max daily job submissions
+  
+  # Experiment limits
+  max_experiments_per_session: 20  # Max experiments per session
+  
+  # Disk usage limits
+  max_results_size_gb: 50      # Max results/ folder size
+  max_logs_size_gb: 10         # Max logs/ folder size
+
+# ============================================================
+# Protected Files/Folders
+# ============================================================
+protected:
+  # Files that must never be deleted or overwritten
+  files:
+    - ".github/copilot-instructions.md"
+    - "documents/PROJECT.md"
+    - "configs/agent_policy.yaml"
+    - "pyproject.toml"
+    - "README.md"
+  
+  # Folders that must not be deleted (contents can be modified)
+  directories:
+    - "src/"
+    - "scripts/"
+    - "configs/"
+    - "documents/"
+  
+  # Read-only folders
+  readonly_directories:
+    - ".git/"
+    - ".github/"
+
+# ============================================================
+# Experiment Rules
+# ============================================================
+experiment:
+  # Config file output location (to avoid overwriting defaults)
+  config_output_dir: "configs/generated/"
+  
+  # Result file naming convention
+  result_naming: "{date}_{time}_{experiment_name}.json"
+  
+  # Required metadata fields
+  required_metadata:
+    - "experiment_name"
+    - "timestamp"
+    - "config"
+    - "git_commit"
+
+# ============================================================
+# Automation Rules
+# ============================================================
+automation:
+  # Auto-retry on failure
+  auto_retry_on_failure: false
+  max_retry_attempts: 1
+  
+  # Auto-cleanup settings
+  auto_cleanup:
+    enabled: false
+    keep_last_n_results: 100
+    keep_days: 30
+  
+  # Job polling settings
+  job_poll_interval_seconds: 30
+  max_wait_time_minutes: 480  # 8 hours
+
+# ============================================================
+# Reporting Rules
+# ============================================================
+reporting:
+  # Failure log location
+  failure_log_dir: "memory://issues" # Use mcp_memory_store_memory with tag 'issue'
+  
+  # Required note sections
+  required_note_sections:
+    - "Goal"
+    - "Setup"
+    - "Results"
+    - "Conclusions"
+  
+  # Require baseline comparison
+  require_baseline_comparison: true
+
+# ============================================================
+# Notifications
+# ============================================================
+notifications:
+  on_job_complete: false
+  on_job_failure: true
+  on_resource_limit: true
+
+# ============================================================
+# Agent Behavior Guidelines (Summary)
+# ============================================================
+# Key rules for agent reference:
+# 
+# 1. ALWAYS run get_status before submitting jobs
+# 2. NEVER modify default configs → create new files in configs/generated/
+# 3. NEVER retry immediately on failure → analyze logs first
+# 4. ALWAYS include config_diff in results (for comparison)
+# 5. ALWAYS document experiments in Memory MCP (tags=["note"])
