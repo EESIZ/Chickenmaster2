@@ -7,6 +7,22 @@
 TRPG 스타일의 D100 주사위 시스템과 AI 경쟁자가 있는 치킨집 경영 시뮬레이션 게임입니다.
 불변 도메인 모델과 포트-어댑터 패턴을 적용한 **헥사고날 아키텍처**로 구현되었습니다.
 
+### 개발 로드맵
+
+```mermaid
+graph LR
+    A[Phase 1-4: CLI 게임] --> B[Phase 5: 웹게임]
+    B --> C[Phase 6: 모바일 앱]
+    
+    style A fill:#90EE90
+    style B fill:#87CEEB
+    style C fill:#FFB6C1
+```
+
+**1차 목표**: CLI 기반 완성 (Phase 1-4)
+**2차 목표**: 웹게임 전환 (React + FastAPI)
+**최종 목표**: 모바일 앱 출시 (React Native, iOS/Android)
+
 ## 주요 특징
 
 - 🎲 **D100 주사위 시스템**: 확률 기반 게임플레이
@@ -15,6 +31,7 @@ TRPG 스타일의 D100 주사위 시스템과 AI 경쟁자가 있는 치킨집 �
 - 🏗️ **헥사고날 아키텍처**: 도메인 중심 설계, 테스트 가능한 구조
 - 🔒 **불변 도메인 모델**: `@dataclass(frozen=True)` 기반 안정성
 - 🧪 **AI 에이전트 통합**: GitHub Copilot 커스텀 에이전트와 스킬 활용
+- 🌐 **멀티 플랫폼**: CLI → 웹 → 모바일 단계적 확장
 
 
 ## Quick Start
@@ -117,12 +134,25 @@ Domain (도메인 모델) ← 핵심!
 - **UI**: CLI/GUI 미구현
 
 ### 📋 다음 단계
-1. `src/core/ports/repository_port.py` 작성
-2. `src/engine/dice_system.py` 구현
-3. `src/adapters/repository/json_repository.py` 구현
-4. 최소 CLI 구현
 
-**진척률**: 약 30-35%
+**Phase 1 (MVP - CLI)**: 1턴 플레이 가능
+1. `src/engine/dice_system.py` - D100 주사위 구현
+2. `src/core/ports/repository_port.py` - 저장 인터페이스
+3. `src/adapters/repository/json_repository.py` - JSON 저장소
+4. `src/adapters/ui/cli_adapter.py` - CLI 인터페이스
+5. `src/main.py` - 통합 및 DI 연결
+
+**Phase 5 (웹게임)**: 브라우저에서 플레이
+- FastAPI 백엔드 API 개발
+- React + TypeScript 프론트엔드
+- Vercel/Netlify 배포
+
+**Phase 6 (모바일 앱)**: 스토어 출시
+- React Native 크로스 플랫폼 앱
+- 터치 인터페이스 최적화
+- Google Play / App Store 출시
+
+**진척률**: 약 30-35% (Phase 1 기준)
 
 자세한 내용은 [TODO.md](TODO.md) 참조
 
