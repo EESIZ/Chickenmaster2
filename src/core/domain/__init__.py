@@ -22,8 +22,8 @@ from .product import Product, ProductCategory
 from .recipe import Recipe, DefaultRecipes
 from .competitor import Competitor, CompetitorStrategy, DelayedAction
 from .research import Research, ResearchTemplate, DefaultResearchTemplates
-from .inventory import InventoryItem
-from .customer import CustomerAI, CustomerType, CustomerMood, MarketAverages, CustomerDemand
+from .inventory import Inventory
+from .customer import CustomerAI, MarketAverages, CustomerDemand
 from .event import Event, EventChoice, EventEffect, EventTemplate
 from .event_loader import EventLoaderPort
 from .turn import Turn, GamePhase, TurnResult, GameCalendar
@@ -64,12 +64,10 @@ __all__ = [
     "DefaultResearchTemplates",
     
     # 재고 관련
-    "InventoryItem",
+    "Inventory",
     
     # 고객 관련
     "CustomerAI",
-    "CustomerType",
-    "CustomerMood",
     "MarketAverages",
     "CustomerDemand",
     
