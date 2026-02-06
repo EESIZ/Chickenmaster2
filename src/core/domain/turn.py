@@ -7,7 +7,7 @@
 
 from dataclasses import dataclass
 from enum import Enum, auto
-from datetime import date
+from datetime import date, timedelta
 from typing import Optional
 from uuid import UUID
 
@@ -118,7 +118,6 @@ class Turn:
         if not self.is_complete:
             raise ValueError("현재 턴이 완료되지 않았습니다")
         
-        from datetime import timedelta
         next_date = self.game_date + timedelta(days=1)
         
         return Turn(

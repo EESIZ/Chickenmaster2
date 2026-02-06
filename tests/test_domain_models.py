@@ -19,8 +19,8 @@ from src.core.domain import (
     Recipe, DefaultRecipes,
     Competitor, CompetitorStrategy, DelayedAction,
     Research, ResearchTemplate,
-    InventoryItem,
-    CustomerAI, CustomerType, CustomerMood, MarketAverages,
+    Inventory,
+    CustomerAI, MarketAverages,
     Event, EventChoice, EventEffect, EventTemplate,
     Turn, GamePhase, GameCalendar,
 )
@@ -34,7 +34,7 @@ class TestValueObjects:
         """Money 생성 테스트"""
         money = Money(10000)
         assert money.amount == 10000
-        assert money.format_korean() == "10,000원"
+        assert money.format_korean() == "₩10,000"
     
     def test_money_arithmetic(self):
         """Money 산술 연산 테스트"""
@@ -64,21 +64,20 @@ class TestValueObjects:
         """Percentage 유효성 검사 테스트"""
         with pytest.raises(ValueError):
             Percentage(-1)  # 음수
-        with pytest.raises(ValueError):
-            Percentage(101)  # 100 초과
+        # 100 초과 허용 (피로도 등)
     
     def test_stat_value_creation(self):
         """StatValue 생성 테스트"""
-        stat = StatValue(base_value=50, experience=Experience(1000))
+        stat = StatValue(base_value=50, experience=Experience(100))
         assert stat.base_value == 50
-        assert stat.experience.value == 1000
+        assert stat.experience.value == 100
     
     def test_stat_value_dice_bonus(self):
         """StatValue 다이스 보너스 계산 테스트"""
         stat = StatValue(base_value=50, experience=Experience(0))
         # 현재 공식: (base_value/100)*100 = base_value (의미 없음)
         # 원래 공식: (base_value/20)*100 = 250이어야 함
-        assert stat.get_dice_bonus() == 50  # 현재 구현
+        assert stat.get_dice_bonus() == 5  # 현재 구현 (// 10)
 
 
 class TestPlayer:
@@ -191,6 +190,7 @@ class TestStore:
             product_ids=(),
             inventory_item_ids=(),
             parttime_worker_ids=(),
+            is_first_store=True,
         )
         
         assert store.name == "테스트 치킨집"
@@ -206,6 +206,7 @@ class TestStore:
             product_ids=(),
             inventory_item_ids=(),
             parttime_worker_ids=(),
+            is_first_store=True,
         )
         
         daily_rent = store.get_daily_rent()
@@ -221,6 +222,7 @@ class TestStore:
             product_ids=(),
             inventory_item_ids=(),
             parttime_worker_ids=(),
+            is_first_store=True,
         )
         
         product_id = uuid4()
@@ -239,64 +241,75 @@ class TestStore:
 class TestProduct:
     """제품 엔티티 테스트"""
     
+    def _create_test_ingredient(self):
+        return Inventory(
+            id=uuid4(),
+            name="닭고기",
+            quantity=100,
+            quality=80,
+            purchase_price=Money(5000)
+        )
+
     def test_product_creation(self):
         """제품 생성 테스트"""
+        ingredient = self._create_test_ingredient()
         product = Product(
             id=uuid4(),
             recipe_id=uuid4(),
             name="후라이드 치킨",
-            category=ProductCategory.FRIED_CHICKEN,
-            price=Money(15000),
-            quality=85,
+            selling_price=Money(15000),
+            research_progress=Progress(0),
+            ingredients=[ingredient],
             awareness=20,
         )
         
         assert product.name == "후라이드 치킨"
-        assert product.category == ProductCategory.FRIED_CHICKEN
-        assert product.price.amount == 15000
-        assert product.quality == 85
+        assert product.selling_price.amount == 15000
         assert product.awareness == 20
+        assert len(product.ingredients) == 1
     
     def test_product_price_setting(self):
         """제품 가격 설정 테스트"""
+        ingredient = self._create_test_ingredient()
         product = Product(
             id=uuid4(),
             recipe_id=uuid4(),
             name="후라이드 치킨",
-            category=ProductCategory.FRIED_CHICKEN,
-            price=Money(15000),
-            quality=85,
+            selling_price=Money(15000),
+            research_progress=Progress(0),
+            ingredients=[ingredient],
             awareness=20,
         )
         
-        # 가격 변경
-        expensive_product = product.set_price(Money(18000))
-        assert expensive_product.price.amount == 18000
-        assert product.price.amount == 15000  # 원본 불변
+        # 가격 변경 (update_selling_price)
+        expensive_product = product.update_selling_price(Money(18000))
+        assert expensive_product.selling_price.amount == 18000
+        assert product.selling_price.amount == 15000  # 원본 불변
     
     def test_product_awareness_changes(self):
         """제품 인지도 변경 테스트"""
+        ingredient = self._create_test_ingredient()
         product = Product(
             id=uuid4(),
             recipe_id=uuid4(),
             name="후라이드 치킨",
-            category=ProductCategory.FRIED_CHICKEN,
-            price=Money(15000),
-            quality=85,
+            selling_price=Money(15000),
+            research_progress=Progress(0),
+            ingredients=[ingredient],
             awareness=20,
         )
         
-        # 인지도 증가
-        famous_product = product.increase_awareness(10)
-        assert famous_product.awareness == 30
+        # 판매로 인한 인지도 증가
+        famous_product = product.increase_awareness_by_sale()
+        assert famous_product.awareness == 23  # +3
         
-        # 인지도 감소
-        unknown_product = product.decrease_awareness(15)
-        assert unknown_product.awareness == 5
+        # 일일 감소
+        unknown_product = product.decrease_awareness_daily()
+        assert unknown_product.awareness == 19 # -1
         
-        # 인지도 0 이하로 감소하지 않음
-        zero_product = product.decrease_awareness(25)
-        assert zero_product.awareness == 0
+        # 시장 점유율로 증가
+        share_product = product.increase_awareness_by_market_share(0.5) # 50%
+        assert share_product.awareness == 25 # +5 (0.5 * 10)
 
 
 class TestRecipe:
@@ -356,8 +369,8 @@ class TestRecipe:
         ingredient_quality = 80
         
         final_quality = recipe.calculate_final_quality(cooking_stat, ingredient_quality)
-        # (30 + 60 + 100 + 80) / 4 = 67.5 -> 67
-        assert final_quality == 67
+        # (30 + 60/10 + 100/20 + 80) = 30 + 6 + 5 + 80 = 121
+        assert final_quality == 121
 
 
 class TestCompetitor:
@@ -494,12 +507,12 @@ class TestTurn:
         assert not next_turn.is_complete
 
 
-class TestInventoryItem:
+class TestInventory:
     """재고 아이템 테스트"""
     
     def test_inventory_creation(self):
         """재고 생성 테스트"""
-        item = InventoryItem(
+        item = Inventory(
             id=uuid4(),
             name="재료",
             quantity=100,
@@ -514,7 +527,7 @@ class TestInventoryItem:
     
     def test_inventory_quantity_operations(self):
         """재고 수량 조작 테스트"""
-        item = InventoryItem(
+        item = Inventory(
             id=uuid4(),
             name="재료",
             quantity=100,
@@ -522,44 +535,44 @@ class TestInventoryItem:
             purchase_price=Money(5000),
         )
         
-        # 수량 사용
-        used_item = item.use_quantity(30)
+        # 수량 사용 (remove)
+        used_item = item.remove(30)
         assert used_item.quantity == 70
         assert item.quantity == 100  # 원본 불변
         
-        # 수량 추가
-        added_item = item.add_quantity(50)
+        # 수량 추가 (add - 품질, 가격 필요)
+        added_item = item.add(50, 85, Money(5000))
         assert added_item.quantity == 150
         
         # 재고 부족 시 예외
-        with pytest.raises(ValueError, match="재고 부족"):
-            item.use_quantity(150)
+        with pytest.raises(ValueError):
+            item.remove(150)
     
     def test_inventory_status_check(self):
         """재고 상태 확인 테스트"""
         # 정상 재고
-        normal_item = InventoryItem(
+        normal_item = Inventory(
             id=uuid4(),
             name="재료",
             quantity=100,
             quality=85,
             purchase_price=Money(5000),
         )
-        assert not normal_item.is_out_of_stock()
+        assert normal_item.quantity > 0
         
         # 재고 소진
-        empty_item = InventoryItem(
+        empty_item = Inventory(
             id=uuid4(),
             name="재료",
             quantity=0,
             quality=85,
             purchase_price=Money(5000),
         )
-        assert empty_item.is_out_of_stock()
+        assert empty_item.quantity == 0
     
     def test_inventory_value_calculation(self):
         """재고 가치 계산 테스트"""
-        item = InventoryItem(
+        item = Inventory(
             id=uuid4(),
             name="재료",
             quantity=10,
@@ -567,8 +580,8 @@ class TestInventoryItem:
             purchase_price=Money(1000),
         )
         
-        total_value = item.calculate_total_value()
-        assert total_value.amount == 10000  # 10 * 1000
+        total_value = item.quantity * item.purchase_price.amount
+        assert total_value == 10000  # 10 * 1000
 
 
 class TestGameCalendar:

@@ -19,6 +19,8 @@ class CompetitorStrategy(Enum):
     
     AGGRESSIVE = auto()  # 공격적 전략 (가격 인하, 마케팅 강화)
     DEFENSIVE = auto()  # 방어적 전략 (품질 유지, 비용 절감)
+    PRICE_AGGRESSIVE = auto() # 가격 경쟁 중심
+    BALANCED = auto() # 균형 잡힌 전략
 
 
 @dataclass(frozen=True)

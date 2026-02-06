@@ -16,10 +16,6 @@ class Money:
     
     amount: int
     
-    def __post_init__(self):
-        if self.amount < 0:
-            raise ValueError(f"금액은 0원 이하일 수 없습니다: {self.amount}")
-    
     def __add__(self, other: Union['Money', int]) -> 'Money':
         if isinstance(other, Money):
             return Money(self.amount + other.amount)
@@ -35,6 +31,9 @@ class Money:
     
     def __truediv__(self, divisor: Union[int, float]) -> 'Money':
         return Money(int(self.amount / divisor))
+
+    def __floordiv__(self, divisor: Union[int, float]) -> 'Money':
+        return Money(int(self.amount // divisor))
     
     def __lt__(self, other: Union['Money', int]) -> bool:
         if isinstance(other, Money):
@@ -59,6 +58,14 @@ class Money:
     def is_zero(self) -> bool:
         """금액이 0원인지 확인"""
         return self.amount == 0
+
+    def is_positive(self) -> bool:
+        """금액이 양수인지 확인"""
+        return self.amount > 0
+
+    def is_negative(self) -> bool:
+        """금액이 음수인지 확인"""
+        return self.amount < 0
     
     def format_korean(self) -> str:
         """한국식 원화 표기로 포맷"""
@@ -72,13 +79,13 @@ class Percentage:
     value: float
     
     def __post_init__(self):
-        if not 0 <= self.value <= 100:
-            raise ValueError(f"퍼센트 값은 0~100 사이여야 합니다: {self.value}")
+        if self.value < 0:
+            raise ValueError(f"퍼센트 값은 음수일 수 없습니다: {self.value}")
     
     def __add__(self, other: Union['Percentage', float]) -> 'Percentage':
         if isinstance(other, Percentage):
-            return Percentage(min(100, self.value + other.value))
-        return Percentage(min(100, self.value + other))
+            return Percentage(self.value + other.value)
+        return Percentage(self.value + other)
     
     def __sub__(self, other: Union['Percentage', float]) -> 'Percentage':
         if isinstance(other, Percentage):
@@ -86,7 +93,27 @@ class Percentage:
         return Percentage(max(0, self.value - other))
     
     def __mul__(self, multiplier: Union[int, float]) -> 'Percentage':
-        return Percentage(min(100, self.value * multiplier))
+        return Percentage(self.value * multiplier)
+
+    def __lt__(self, other: Union['Percentage', float]) -> bool:
+        if isinstance(other, Percentage):
+            return self.value < other.value
+        return self.value < other
+
+    def __le__(self, other: Union['Percentage', float]) -> bool:
+        if isinstance(other, Percentage):
+            return self.value <= other.value
+        return self.value <= other
+
+    def __gt__(self, other: Union['Percentage', float]) -> bool:
+        if isinstance(other, Percentage):
+            return self.value > other.value
+        return self.value > other
+
+    def __ge__(self, other: Union['Percentage', float]) -> bool:
+        if isinstance(other, Percentage):
+            return self.value >= other.value
+        return self.value >= other
     
     def as_ratio(self) -> float:
         """0.0~1.0 비율로 변환"""
@@ -188,6 +215,7 @@ class StatValue:
     """스탯 값 객체"""
     
     base_value: int  # 기본 스탯값
+    experience: Experience = Experience(0) # 경험치
     
     def __post_init__(self):
         if self.base_value < 0:
