@@ -248,8 +248,8 @@ class ActionService:
         """구체적인 행동 실행"""
         specific_action = self._parse_specific_action(request.action_type, request.specific_action)
         
-        # 기본 정보 수집
-        time_cost = self.ACTION_TIME_COSTS.get(specific_action, request.time_hours)
+        # 기본 정보 수집 — request.time_hours 우선 (0.5h 단위 지원)
+        time_cost = request.time_hours if request.time_hours else self.ACTION_TIME_COSTS.get(specific_action, 1)
         fatigue_per_hour = self.ACTION_FATIGUE_COSTS.get(specific_action, 0)
         exp_gains = self.ACTION_EXPERIENCE_GAINS.get(specific_action, {})
         action_cost = self._get_action_cost(specific_action, player)
@@ -436,17 +436,34 @@ class ActionService:
             PersonalAction.EXERCISE: "운동을 했습니다",
             
             # 휴식
-            RestAction.SLEEP: "잠을 잤습니다",
+            RestAction.SLEEP: None,  # 랜덤 메시지 사용
         }
-        
-        base_message = action_names.get(specific_action, "행동을 수행했습니다")
+
+        _rest_messages = [
+            "휴식을 취했습니다",
+            "잠깐 쉬었습니다",
+            "커피 한 잔 마셨습니다",
+            "스마트폰을 좀 봤습니다",
+            "멍하니 쉬었습니다",
+            "간식을 먹으며 쉬었습니다",
+            "의자에 기대어 눈을 감았습니다",
+            "바깥 바람을 쐬었습니다",
+        ]
+
+        import random as _rng
+        base_message = action_names.get(specific_action) or _rng.choice(_rest_messages)
+
+        # 휴식은 시간/피로/경험치 표시 생략
+        if specific_action == RestAction.SLEEP:
+            return base_message
+
         base_message += f" ({time_cost}시간 소모)"
-        
+
         if fatigue_change > 0:
             base_message += f", 피로도 +{fatigue_change:.1f}"
         elif fatigue_change < 0:
             base_message += f", 피로도 {fatigue_change:.1f}"
-        
+
         if exp_gains:
             exp_messages = [f"{stat} +{exp}" for stat, exp in exp_gains.items() if exp > 0]
             if exp_messages:

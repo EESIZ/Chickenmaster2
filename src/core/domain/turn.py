@@ -14,13 +14,22 @@ from uuid import UUID
 
 class GamePhase(Enum):
     """게임 페이즈"""
-    
+
     PLAYER_ACTION = auto()  # 1. 플레이어 행동
     AI_ACTION = auto()  # 2. AI 행동 (경쟁자)
     EVENT = auto()  # 3. 이벤트
     SALES = auto()  # 4. 판매
     SETTLEMENT = auto()  # 5. 정산
     CLEANUP = auto()  # 6. 마무리
+
+
+class DaySegment(Enum):
+    """하루 4구간"""
+
+    PREP = "PREP"          # 준비 (기상→오픈)
+    BUSINESS = "BUSINESS"  # 영업 (오픈→마감)
+    NIGHT = "NIGHT"        # 야간 (마감→취침)
+    SLEEP = "SLEEP"        # 수면 (취침→기상)
 
 
 @dataclass(frozen=True)

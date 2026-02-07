@@ -1,0 +1,15 @@
+FROM python:3.13-slim
+
+WORKDIR /app
+
+# 웹 의존성만 설치 (torch 등 불필요)
+RUN pip install --no-cache-dir fastapi uvicorn[standard]
+
+COPY src/ src/
+COPY web/ web/
+COPY data/ data/
+
+ENV PYTHONPATH=/app/src
+EXPOSE 8000
+
+CMD ["uvicorn", "web.main:app", "--host", "0.0.0.0", "--port", "8000"]

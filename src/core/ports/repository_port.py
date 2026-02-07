@@ -68,6 +68,11 @@ class RepositoryPort(ABC):
 
     # --- Product ---
     @abstractmethod
+    def save_product(self, product: Product) -> None:
+        """제품 데이터를 저장합니다."""
+        pass
+
+    @abstractmethod
     def get_product(self, product_id: UUID) -> Optional[Product]:
         pass
 

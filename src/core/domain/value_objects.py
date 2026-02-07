@@ -228,6 +228,12 @@ class StatValue:
         new_base = max(0, self.base_value - penalty)
         return StatValue(base_value=new_base)
     
+    def add_experience(self, exp_amount: int) -> 'StatValue':
+        """경험치를 추가하고 레벨업 시 base_value를 증가시킵니다."""
+        result, level_ups = self.experience + exp_amount
+        new_base = self.base_value + level_ups
+        return StatValue(base_value=new_base, experience=result)
+
     def get_dice_bonus(self) -> int:
         """주사위 굴림 보너스 계산 (스탯 10당 +1)"""
         return self.base_value // 10

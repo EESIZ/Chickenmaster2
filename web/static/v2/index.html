@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>치킨마스터2</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- 타이틀 화면 -->
+    <div id="screen-title" class="screen active">
+        <div class="title-container">
+            <h1 class="game-title">치킨마스터 2</h1>
+            <p class="game-subtitle">당신만의 치킨 제국을 만들어보세요</p>
+            <div class="title-form">
+                <input type="text" id="player-name" placeholder="플레이어 이름" value="김치킨" maxlength="20">
+                <button id="btn-new-game" class="btn btn-primary btn-lg">새 게임 시작</button>
+            </div>
+            <div id="resume-section" class="resume-section" style="display:none">
+                <h3>이어하기</h3>
+                <div id="game-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 메인 게임 화면 -->
+    <div id="screen-game" class="screen">
+        <!-- 대시보드 -->
+        <header id="dashboard" class="dashboard">
+            <div class="dash-row">
+                <div class="dash-item">
+                    <span class="dash-label">턴</span>
+                    <span id="dash-turn" class="dash-value">1</span>
+                </div>
+                <div class="dash-item">
+                    <span class="dash-label">날짜</span>
+                    <span id="dash-date" class="dash-value">-</span>
+                </div>
+                <div class="dash-item money">
+                    <span class="dash-label">자금</span>
+                    <span id="dash-money" class="dash-value">-</span>
+                </div>
+                <div class="dash-item">
+                    <span class="dash-label">재고</span>
+                    <span id="dash-stock" class="dash-value">-</span>
+                </div>
+                <div class="dash-item">
+                    <span class="dash-label">원재료</span>
+                    <span id="dash-ingredient" class="dash-value">-</span>
+                </div>
+                <div class="dash-item">
+                    <span class="dash-label">준비량</span>
+                    <span id="dash-prepared" class="dash-value">0</span>
+                </div>
+                <div class="dash-item">
+                    <span class="dash-label">평판</span>
+                    <span id="dash-reputation" class="dash-value">50</span>
+                </div>
+            </div>
+            <div class="dash-row">
+                <div class="dash-item">
+                    <span class="dash-label">피로</span>
+                    <div class="bar-container">
+                        <div id="bar-fatigue" class="bar bar-fatigue" style="width:0%"></div>
+                    </div>
+                    <span id="dash-fatigue" class="dash-value-sm">0</span>
+                </div>
+                <div class="dash-item">
+                    <span class="dash-label">행복</span>
+                    <div class="bar-container">
+                        <div id="bar-happiness" class="bar bar-happiness" style="width:50%"></div>
+                    </div>
+                    <span id="dash-happiness" class="dash-value-sm">50</span>
+                </div>
+                <div class="stat-group">
+                    <span class="stat" title="요리">🍳<span id="stat-cooking">10</span></span>
+                    <span class="stat" title="경영">📊<span id="stat-management">8</span></span>
+                    <span class="stat" title="서비스">💁<span id="stat-service">8</span></span>
+                    <span class="stat" title="기술">🔧<span id="stat-tech">5</span></span>
+                    <span class="stat" title="체력">💪<span id="stat-stamina">50</span></span>
+                </div>
+                <div class="dash-item price-section">
+                    <span class="dash-label">판매가</span>
+                    <span id="dash-price" class="dash-value">-</span>
+                    <button id="btn-price" class="btn btn-sm">변경</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 4구간 인디케이터 -->
+        <div id="segment-indicator" class="segment-indicator">
+            <span class="seg-badge" data-seg="PREP">🌅 준비</span>
+            <span class="seg-arrow">&rarr;</span>
+            <span class="seg-badge" data-seg="BUSINESS">🏪 영업</span>
+            <span class="seg-arrow">&rarr;</span>
+            <span class="seg-badge" data-seg="NIGHT">🌙 야간</span>
+            <span class="seg-arrow">&rarr;</span>
+            <span class="seg-badge" data-seg="SLEEP">😴 수면</span>
+        </div>
+
+        <!-- 24시간 타임라인 바 -->
+        <div id="day-timeline" class="day-timeline">
+            <div class="day-bar">
+                <div id="seg-bar-PREP" class="seg-bar seg-prep"></div>
+                <div id="seg-bar-BUSINESS" class="seg-bar seg-business"></div>
+                <div id="seg-bar-NIGHT" class="seg-bar seg-night"></div>
+                <div id="seg-bar-SLEEP" class="seg-bar seg-sleep"></div>
+            </div>
+            <div class="day-labels">
+                <span id="label-wake">7:00</span>
+                <span id="label-open">10:00</span>
+                <span id="label-close">21:00</span>
+                <span id="label-sleep">24:00</span>
+            </div>
+        </div>
+
+        <!-- 준비/야간 행동 영역 -->
+        <div id="area-action" class="game-area">
+            <div id="timeline" class="timeline">
+                <div class="timeline-header">
+                    <h3 id="timeline-title">준비 시간표</h3>
+                    <span id="timeline-info">0 / 3시간</span>
+                </div>
+                <div id="timeline-bar" class="timeline-bar">
+                    <div id="timeline-slots" class="timeline-slots"></div>
+                    <div id="timeline-remaining" class="timeline-remaining"></div>
+                </div>
+            </div>
+            <div id="card-list" class="card-list"></div>
+            <div class="action-buttons">
+                <button id="btn-confirm" class="btn btn-primary btn-lg" disabled>행동 확정</button>
+            </div>
+        </div>
+
+        <!-- 행동 결과 영역 -->
+        <div id="area-action-results" class="game-area" style="display:none">
+            <h2 id="action-results-title">행동 결과</h2>
+            <div id="action-results-list" class="results-list"></div>
+            <button id="btn-after-results" class="btn btn-primary btn-lg">다음</button>
+        </div>
+
+        <!-- 영업 영역 -->
+        <div id="area-business" class="game-area" style="display:none">
+            <div class="business-container">
+                <div class="business-header">
+                    <div class="biz-clock">
+                        <span class="biz-clock-icon">🕐</span>
+                        <span id="biz-time">10:00</span>
+                    </div>
+                    <div class="biz-stats">
+                        <div class="biz-stat">
+                            <span class="biz-label">고객</span>
+                            <span id="biz-customers" class="biz-value">0</span>
+                        </div>
+                        <div class="biz-stat">
+                            <span class="biz-label">매출</span>
+                            <span id="biz-revenue" class="biz-value">₩0</span>
+                        </div>
+                        <div class="biz-stat">
+                            <span class="biz-label">준비량</span>
+                            <span id="biz-prepared" class="biz-value">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="biz-progress">
+                    <div id="biz-progress-bar" class="biz-progress-bar"></div>
+                </div>
+                <div id="biz-customer-area" class="biz-customer-area"></div>
+                <div id="biz-log" class="biz-log"></div>
+            </div>
+        </div>
+
+        <!-- 영업 요약 영역 -->
+        <div id="area-business-summary" class="game-area" style="display:none">
+            <div class="phase-card">
+                <div class="phase-icon">🏪</div>
+                <h2 class="phase-title">영업 종료</h2>
+                <div id="business-summary-body" class="phase-body"></div>
+                <button id="btn-after-business" class="btn btn-primary btn-lg">야간으로</button>
+            </div>
+        </div>
+
+        <!-- 수면 영역 -->
+        <div id="area-sleep" class="game-area" style="display:none">
+            <div class="sleep-container">
+                <div class="sleep-emoji">😴</div>
+                <h2 class="sleep-title">수면 중...</h2>
+                <p id="sleep-info" class="sleep-info">피로가 회복되고 있습니다</p>
+                <button id="btn-next-day" class="btn btn-primary btn-lg">다음 날</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 가격 변경 모달 -->
+    <div id="modal-price" class="modal" style="display:none">
+        <div class="modal-content">
+            <h3>판매 가격 변경</h3>
+            <input type="number" id="input-price" min="5000" max="100000" step="1000">
+            <div class="modal-actions">
+                <button id="btn-price-ok" class="btn btn-primary">확인</button>
+                <button id="btn-price-cancel" class="btn">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 시간 설정 모달 -->
+    <div id="modal-time-config" class="modal" style="display:none">
+        <div class="modal-content">
+            <h3>하루 시간 설정</h3>
+            <div class="time-config-group">
+                <label>기상 시간 <span id="tc-wake-val">7</span>시</label>
+                <input type="range" id="tc-wake" min="5" max="8" value="7">
+            </div>
+            <div class="time-config-group">
+                <label>오픈 시간 <span id="tc-open-val">10</span>시</label>
+                <input type="range" id="tc-open" min="9" max="12" value="10">
+            </div>
+            <div class="time-config-group">
+                <label>마감 시간 <span id="tc-close-val">21</span>시</label>
+                <input type="range" id="tc-close" min="18" max="23" value="21">
+            </div>
+            <div class="time-config-group">
+                <label>취침 시간 <span id="tc-sleep-val">24</span>시</label>
+                <input type="range" id="tc-sleep" min="22" max="26" value="24">
+            </div>
+            <div class="modal-actions">
+                <button id="btn-tc-ok" class="btn btn-primary">확인</button>
+                <button id="btn-tc-cancel" class="btn">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 의사결정 모달 -->
+    <div id="modal-decision" class="modal" style="display:none">
+        <div class="modal-content decision-card">
+            <h3 id="decision-title"></h3>
+            <p id="decision-desc" class="decision-desc"></p>
+            <div class="decision-choices">
+                <button id="btn-choice-a" class="btn btn-primary btn-lg decision-btn"></button>
+                <button id="btn-choice-b" class="btn btn-lg decision-btn"></button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/timeline.js"></script>
+    <script src="js/phase-cards.js"></script>
+    <script src="js/business.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
