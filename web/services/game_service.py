@@ -2,9 +2,7 @@
 
 import io
 import json
-import math
 import os
-import random
 import sys
 from contextlib import contextmanager
 from datetime import date
@@ -13,17 +11,23 @@ from uuid import UUID, uuid4
 
 from web.config import DB_PATH, EVENTS_CSV
 from web.services.balance import (
-    INITIAL_MONEY, INITIAL_STOCK, INITIAL_INGREDIENT_QTY, INITIAL_INGREDIENT_QUALITY,
+    INITIAL_MONEY, INITIAL_INGREDIENT_QTY, INITIAL_INGREDIENT_QUALITY,
     INGREDIENT_PURCHASE_PRICE, INITIAL_SELLING_PRICE, INITIAL_AWARENESS, MONTHLY_RENT,
     INITIAL_REPUTATION, INITIAL_STATS,
     DEFAULT_TIME, TIME_RANGES,
     PREPARE_GAIN, PREPARE_INGREDIENT_COST, ORDER_INGREDIENT_GAIN,
-    CUSTOMERS_PER_HOUR, REPUTATION_BASE, MARGIN_MULT_FLOOR, SALES_MULT_FLOOR,
     REPUTATION_MIN, REPUTATION_MAX,
-    BUSINESS_DECISIONS, DECISIONS_PER_BUSINESS,
+    BUSINESS_DECISIONS,
     FATIGUE_RECOVERY_PER_HOUR,
     PRICE_STEP, PRICE_MIN, PRICE_MAX,
+    INITIAL_FRESHNESS, FRESHNESS_MIN, FRESHNESS_MAX,
+    ORDER_INGREDIENT_FRESHNESS,
+    FRESHNESS_BASE_DECAY, FRESHNESS_QTY_DIVISOR, FRESHNESS_HOARDING_PENALTY,
+    FRESHNESS_REPUTATION_THRESHOLD, FRESHNESS_REPUTATION_PENALTY,
+    TURNAWAY_REP_DIVISOR, TURNAWAY_REP_MAX_PENALTY,
 )
+from web.services.engines.sales_engine import calculate_sales
+from web.services.engines.decision_engine import generate_decisions, apply_decision_effects
 
 
 @contextmanager
@@ -249,6 +253,19 @@ class GameService:
             next_slot += 1
             remaining -= rest_unit
 
+    # ── 신선도 유틸 ──
+
+    @staticmethod
+    def _calc_freshness_decay(ingredient_qty):
+        return FRESHNESS_BASE_DECAY + (ingredient_qty // FRESHNESS_QTY_DIVISOR) * FRESHNESS_HOARDING_PENALTY
+
+    @staticmethod
+    def _weighted_freshness(old_qty, old_freshness, new_qty, new_freshness=ORDER_INGREDIENT_FRESHNESS):
+        total = old_qty + new_qty
+        if total <= 0:
+            return new_freshness
+        return (old_qty * old_freshness + new_qty * new_freshness) / total
+
     # ── Game lifecycle ──
 
     def create_game(self, player_name: str) -> Dict[str, Any]:
@@ -304,7 +321,9 @@ class GameService:
             game_loop.start_new_game(player)
 
         # Initialize segment to PREP
-        repo.update_game_state(game_id, current_segment="PREP", segment_hours_used=0, prepared_qty=0, reputation=INITIAL_REPUTATION)
+        repo.update_game_state(game_id, current_segment="PREP", segment_hours_used=0,
+                               prepared_qty=0, reputation=INITIAL_REPUTATION,
+                               ingredient_freshness=INITIAL_FRESHNESS)
 
         return self.get_state(game_id)
 
@@ -331,9 +350,9 @@ class GameService:
             "store": serialize_store(store, product) if store and product else None,
             "turn": serialize_turn(turn, segment_hours.get(current_segment, 0)) if turn else None,
             "is_running": bool(game.get("is_active")),
-            "stock": gs["stock"] if gs else INITIAL_STOCK,
             "ingredient_qty": gs["ingredient_qty"] if gs else INITIAL_INGREDIENT_QTY,
             "prepared_qty": gs["prepared_qty"] if gs else 0,
+            "ingredient_freshness": gs["ingredient_freshness"] if gs else INITIAL_FRESHNESS,
             "reputation": gs["reputation"] if gs else INITIAL_REPUTATION,
             "current_segment": current_segment,
             "current_phase": current_segment,  # backwards compat for frontend
@@ -553,7 +572,6 @@ class GameService:
 
         from application.action_service import ActionRequest as DomainActionRequest
 
-        stock = gs["stock"]
         ingredient_qty = gs["ingredient_qty"]
         prepared_qty = gs["prepared_qty"]
 
@@ -593,7 +611,7 @@ class GameService:
 
         # Update state → transition to BUSINESS
         repo.update_game_state(game_id,
-            stock=stock, ingredient_qty=ingredient_qty,
+            ingredient_qty=ingredient_qty,
             prepared_qty=prepared_qty, current_segment="BUSINESS",
             segment_hours_used=0,
         )
@@ -604,9 +622,9 @@ class GameService:
         return {
             "success": True,
             "action_results": results,
-            "stock": stock,
             "ingredient_qty": ingredient_qty,
             "prepared_qty": prepared_qty,
+            "ingredient_freshness": gs["ingredient_freshness"],
             "current_segment": "BUSINESS",
         }
 
@@ -628,27 +646,22 @@ class GameService:
         # Clear old decisions
         repo.clear_business_decisions(game_id, turn.turn_number)
 
-        # Generate random decisions (count from balance.py)
-        num_decisions = random.randint(1, DECISIONS_PER_BUSINESS)
-        templates = random.sample(BUSINESS_DECISION_TEMPLATES, min(num_decisions, len(BUSINESS_DECISION_TEMPLATES)))
+        # Generate random decisions via engine
+        generated = generate_decisions(business_hours, BUSINESS_DECISION_TEMPLATES)
 
         decisions = []
-        for i, tmpl in enumerate(templates):
-            trigger_hour = random.randint(1, max(1, business_hours - 1))
-            decision = {**tmpl, "trigger_hour": trigger_hour}
+        for decision in generated:
             dec_id = repo.save_business_decision(game_id, turn.turn_number, decision)
             decisions.append({
                 "id": dec_id,
                 **decision,
             })
 
-        decisions.sort(key=lambda d: d["trigger_hour"])
-
         return {
             "business_hours": business_hours,
             "prepared_qty": gs["prepared_qty"],
-            "stock": gs["stock"],
             "ingredient_qty": gs["ingredient_qty"],
+            "ingredient_freshness": gs["ingredient_freshness"],
             "decisions": decisions,
             "current_segment": "BUSINESS",
         }
@@ -677,39 +690,40 @@ class GameService:
 
         effect = target["choice_a_effect"] if choice == "A" else target["choice_b_effect"]
 
-        # Apply immediate effects
-        ingredient_qty = gs["ingredient_qty"]
-        reputation = gs["reputation"]
-        money = player.money.amount
+        # Apply immediate effects via engine
+        applied = apply_decision_effects(
+            effect,
+            ingredient_qty=gs["ingredient_qty"],
+            reputation=gs["reputation"],
+            money=player.money.amount,
+            fatigue=player.fatigue.value,
+        )
 
-        money_cost = effect.get("money_cost", 0)
-        money_bonus = effect.get("money_bonus", 0)
+        from core.domain.value_objects import Money, Percentage
+
+        if applied["new_money"] != player.money.amount:
+            player = player._replace(money=Money(applied["new_money"]))
+            repo.save_player(player)
+
+        if applied["new_fatigue"] != player.fatigue.value:
+            player = player._replace(fatigue=Percentage(applied["new_fatigue"]))
+            repo.save_player(player)
+
+        # 재료 획득 시 가중 평균 신선도 적용
         ingredient_gain = effect.get("ingredient_gain", 0)
-        rep_change = effect.get("reputation_change", 0)
-        fatigue_change = effect.get("fatigue_change", 0)
+        update_kwargs = {
+            "ingredient_qty": applied["new_ingredient_qty"],
+            "reputation": applied["new_reputation"],
+        }
+        if ingredient_gain > 0:
+            old_qty = gs["ingredient_qty"]
+            old_freshness = gs["ingredient_freshness"]
+            new_freshness = self._weighted_freshness(
+                old_qty, old_freshness, ingredient_gain, ORDER_INGREDIENT_FRESHNESS,
+            )
+            update_kwargs["ingredient_freshness"] = round(new_freshness, 1)
 
-        ingredient_qty += ingredient_gain
-        reputation = max(REPUTATION_MIN, min(REPUTATION_MAX, reputation + rep_change))
-
-        if money_cost > 0:
-            # Deduct money via player update
-            from core.domain.value_objects import Money
-            new_money = max(0, money - money_cost)
-            player = player._replace(money=Money(new_money))
-            repo.save_player(player)
-
-        if money_bonus > 0:
-            from core.domain.value_objects import Money
-            player = player._replace(money=Money(money + money_bonus))
-            repo.save_player(player)
-
-        if fatigue_change != 0:
-            from core.domain.value_objects import Percentage
-            new_fatigue = max(0.0, min(100.0, player.fatigue.value + fatigue_change))
-            player = player._replace(fatigue=Percentage(new_fatigue))
-            repo.save_player(player)
-
-        repo.update_game_state(game_id, ingredient_qty=ingredient_qty, reputation=reputation)
+        repo.update_game_state(game_id, **update_kwargs)
         repo.update_business_decision(decision_id, choice, effect)
 
         return {
@@ -737,54 +751,32 @@ class GameService:
         segment_hours = self._get_segment_hours(game_id)
         business_hours = segment_hours.get("BUSINESS", 11)
 
-        # Calculate sales based on prepared_qty, reputation, and decisions
+        # Calculate sales via engine
         prepared_qty = gs["prepared_qty"]
-        reputation = gs["reputation"]
-        stock = gs["stock"]
         ingredient_qty = gs["ingredient_qty"]
+        ingredient_freshness = gs["ingredient_freshness"]
 
-        # Base customers formula (from balance.py)
-        base_customers = int(business_hours * CUSTOMERS_PER_HOUR * (reputation / REPUTATION_BASE))
-
-        # Apply decision effects
         decisions = repo.get_business_decisions(game_id, turn.turn_number)
-        customer_bonus = 0
-        customer_bonus_pct = 0
-        margin_penalty_pct = 0
-        sales_penalty_pct = 0
-        stock_cost_from_decisions = 0
-
-        for d in decisions:
-            if d["player_choice"]:
-                eff = d["effect_json"]
-                customer_bonus += eff.get("customer_bonus", 0)
-                customer_bonus_pct += eff.get("customer_bonus_pct", 0)
-                margin_penalty_pct += eff.get("margin_penalty_pct", 0)
-                sales_penalty_pct += eff.get("sales_penalty_pct", 0)
-                stock_cost_from_decisions += eff.get("stock_cost", 0)
-
-        total_customers = base_customers + customer_bonus
-        total_customers = int(total_customers * (1 + customer_bonus_pct / 100))
-
-        # Can only serve up to prepared_qty (or stock)
-        available_servings = prepared_qty + stock
-        actual_served = min(total_customers, available_servings)
-
-        # Deduct from prepared first, then stock
-        used_prepared = min(actual_served, prepared_qty)
-        used_stock = actual_served - used_prepared
-        stock_cost_from_decisions = min(stock_cost_from_decisions, stock - used_stock) if stock > used_stock else 0
-
-        remaining_stock = max(0, stock - used_stock - stock_cost_from_decisions)
-        remaining_prepared = max(0, prepared_qty - used_prepared)
-
-        # Revenue
         price = product.selling_price.amount
-        margin_mult = max(MARGIN_MULT_FLOOR, 1.0 - margin_penalty_pct / 100)
-        sales_mult = max(SALES_MULT_FLOOR, 1.0 - sales_penalty_pct / 100)
-        effective_price = int(price * margin_mult * sales_mult)
 
-        total_sales = actual_served * effective_price
+        sales = calculate_sales(
+            business_hours=business_hours,
+            reputation=gs["reputation"],
+            prepared_qty=prepared_qty,
+            ingredient_freshness=ingredient_freshness,
+            decisions=decisions,
+            price=price,
+        )
+
+        base_customers = sales["base_customers"]
+        freshness_mult = sales["freshness_mult"]
+        total_customers = sales["total_customers"]
+        actual_served = sales["actual_served"]
+        turned_away = sales["turned_away"]
+        used_prepared = sales["used_prepared"]
+        remaining_prepared = sales["remaining_prepared"]
+        effective_price = sales["effective_price"]
+        total_sales = sales["total_sales"]
         total_revenue = total_sales
 
         # Apply revenue to player
@@ -792,6 +784,14 @@ class GameService:
         new_money = player.money.amount + total_revenue
         player = player._replace(money=Money(new_money))
         repo.save_player(player)
+
+        # 돌아간 고객 → 평판 페널티
+        turnaway_rep_penalty = 0
+        if turned_away > 0:
+            turnaway_rep_penalty = min(turned_away // TURNAWAY_REP_DIVISOR, TURNAWAY_REP_MAX_PENALTY)
+            if turnaway_rep_penalty > 0:
+                new_rep = max(REPUTATION_MIN, gs["reputation"] - turnaway_rep_penalty)
+                repo.update_game_state(game_id, reputation=new_rep)
 
         # Run engine's auto phases (AI, EVENT, SETTLEMENT) in background
         game_loop, _ = self._build_engine(repo)
@@ -849,7 +849,7 @@ class GameService:
 
         # Update game state → NIGHT
         repo.update_game_state(game_id,
-            stock=remaining_stock, prepared_qty=remaining_prepared,
+            prepared_qty=remaining_prepared,
             current_segment="NIGHT", segment_hours_used=0,
         )
 
@@ -857,11 +857,13 @@ class GameService:
         business_summary = {
             "business_hours": business_hours,
             "base_customers": base_customers,
+            "freshness_mult": freshness_mult,
             "total_customers": total_customers,
             "actual_served": actual_served,
+            "turned_away": turned_away,
+            "turnaway_rep_penalty": turnaway_rep_penalty,
             "total_sales": total_sales,
             "effective_price": effective_price,
-            "stock_used": used_stock,
             "prepared_used": used_prepared,
             "decisions": [
                 {
@@ -880,9 +882,9 @@ class GameService:
 
         return {
             "summary": business_summary,
-            "stock": remaining_stock,
             "prepared_qty": remaining_prepared,
             "ingredient_qty": ingredient_qty,
+            "ingredient_freshness": ingredient_freshness,
             "current_segment": "NIGHT",
             "player": serialize_player(player) if player else None,
             "ai_result": ai_result,
@@ -914,6 +916,7 @@ class GameService:
         from application.action_service import ActionRequest as DomainActionRequest
 
         ingredient_qty = gs["ingredient_qty"]
+        ingredient_freshness = gs["ingredient_freshness"]
 
         for qa in queued:
             at = ACTION_TYPE_MAP.get(qa["action_type"])
@@ -934,7 +937,15 @@ class GameService:
 
             if result.success:
                 effect = STOCK_EFFECTS.get(qa["specific_action"], {})
-                ingredient_qty += effect.get("ingredient_gain", 0)
+                gain = effect.get("ingredient_gain", 0)
+                if gain > 0:
+                    # 재료 주문 시 가중 평균 신선도
+                    old_qty = ingredient_qty
+                    ingredient_qty += gain
+                    ingredient_freshness = self._weighted_freshness(
+                        old_qty, ingredient_freshness,
+                        gain, ORDER_INGREDIENT_FRESHNESS,
+                    )
 
             player = repo.get_player_by_game(game_id)
 
@@ -949,6 +960,7 @@ class GameService:
 
         repo.update_game_state(game_id,
             ingredient_qty=ingredient_qty,
+            ingredient_freshness=round(ingredient_freshness, 1),
             current_segment="SLEEP", segment_hours_used=0,
         )
 
@@ -959,6 +971,7 @@ class GameService:
             "success": True,
             "action_results": results,
             "ingredient_qty": ingredient_qty,
+            "ingredient_freshness": round(ingredient_freshness, 1),
             "current_segment": "SLEEP",
         }
 
@@ -984,6 +997,19 @@ class GameService:
         new_fatigue = max(0.0, player.fatigue.value - fatigue_recovered)
         player = player._replace(fatigue=Percentage(new_fatigue))
         repo.save_player(player)
+
+        # 신선도 감쇄
+        ingredient_qty = gs["ingredient_qty"]
+        ingredient_freshness = gs["ingredient_freshness"]
+        decay = self._calc_freshness_decay(ingredient_qty)
+        ingredient_freshness = max(FRESHNESS_MIN, ingredient_freshness - decay)
+
+        # 신선도가 너무 낮으면 평판 페널티
+        if ingredient_freshness < FRESHNESS_REPUTATION_THRESHOLD:
+            new_rep = max(REPUTATION_MIN, gs["reputation"] + FRESHNESS_REPUTATION_PENALTY)
+            repo.update_game_state(game_id, reputation=new_rep)
+
+        repo.update_game_state(game_id, ingredient_freshness=round(ingredient_freshness, 1))
 
         # Mark current turn as complete and create next turn
         completed_turn = turn._replace(is_complete=True)
@@ -1016,6 +1042,7 @@ class GameService:
             "sleep_hours": sleep_hours,
             "fatigue_recovered": fatigue_recovered,
             "new_fatigue": round(new_fatigue, 1),
+            "ingredient_freshness": round(ingredient_freshness, 1),
             "turn_number": next_turn_number,
             "game_date": next_date.isoformat(),
             "current_segment": "PREP",

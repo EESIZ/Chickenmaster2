@@ -1,5 +1,5 @@
 /**
- * 대시보드 업데이트 — 4구간 시스템
+ * 대시보드 업데이트 — 게이지 바 시스템
  */
 const Dashboard = {
     update(data) {
@@ -18,8 +18,8 @@ const Dashboard = {
             this._set('dash-happiness', p.happiness);
 
             const fatigueMax = (p.stats?.stamina || 50) * 2;
-            this._bar('bar-fatigue', p.fatigue, fatigueMax);
-            this._bar('bar-happiness', p.happiness, 100);
+            this._gaugeBar('bar-fatigue', p.fatigue, fatigueMax);
+            this._gaugeBar('bar-happiness', p.happiness, 100);
 
             if (p.stats) {
                 this._set('stat-cooking', p.stats.cooking);
@@ -33,10 +33,26 @@ const Dashboard = {
             this._set('dash-price', s.selling_price_formatted);
         }
 
-        this._set('dash-stock', data.stock ?? '-');
-        this._set('dash-ingredient', data.ingredient_qty ?? '-');
-        this._set('dash-prepared', data.prepared_qty ?? 0);
-        this._set('dash-reputation', data.reputation ?? 50);
+        // 원재료 게이지 (max 200 for display)
+        const iq = data.ingredient_qty ?? 0;
+        this._set('dash-ingredient', iq);
+        this._gaugeBar('bar-ingredient', iq, 200);
+
+        // 준비량 게이지 (max = ingredient_qty or 100)
+        const pq = data.prepared_qty ?? 0;
+        this._set('dash-prepared', pq);
+        this._gaugeBar('bar-prepared', pq, Math.max(iq, 50));
+
+        // 신선도 게이지 (0~100)
+        const fr = data.ingredient_freshness ?? 90;
+        this._set('dash-freshness', Math.round(fr));
+        this._gaugeBar('bar-freshness', fr, 100);
+        this._updateFreshnessColor(fr);
+
+        // 평판 게이지 (0~100)
+        const rep = data.reputation ?? 50;
+        this._set('dash-reputation', rep);
+        this._gaugeBar('bar-reputation', rep, 100);
 
         // Segment indicator
         this.updateSegmentIndicator(data.current_segment || 'PREP');
@@ -86,8 +102,20 @@ const Dashboard = {
         if (el) el.textContent = val;
     },
 
-    _bar(id, val, max) {
+    _gaugeBar(id, val, max) {
         const el = document.getElementById(id);
         if (el) el.style.width = Math.min(100, (val / max) * 100) + '%';
+    },
+
+    _updateFreshnessColor(freshness) {
+        const el = document.getElementById('bar-freshness');
+        if (!el) return;
+        if (freshness >= 70) {
+            el.style.backgroundColor = 'var(--green)';
+        } else if (freshness >= 40) {
+            el.style.backgroundColor = 'var(--orange)';
+        } else {
+            el.style.backgroundColor = 'var(--red)';
+        }
     },
 };

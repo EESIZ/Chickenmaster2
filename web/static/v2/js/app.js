@@ -355,8 +355,8 @@ const App = {
         if (summaryData.player) {
             GameState.gameData.player = summaryData.player;
         }
-        GameState.gameData.stock = summaryData.stock;
         GameState.gameData.prepared_qty = summaryData.prepared_qty;
+        GameState.gameData.ingredient_freshness = summaryData.ingredient_freshness;
         GameState.gameData.current_segment = 'NIGHT';
         Dashboard.update(GameState.gameData);
         GameState.setSegment('NIGHT');

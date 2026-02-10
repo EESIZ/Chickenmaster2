@@ -1,38 +1,6 @@
-# Chickenmaster2 🍗
+# Chickenmaster2
 
-한국 치킨집 경영 시뮬레이션 게임 - **헥사고날 아키텍처** 기반 Python 프로젝트
-
-## 프로젝트 개요
-
-TRPG 스타일의 D100 주사위 시스템과 AI 경쟁자가 있는 치킨집 경영 시뮬레이션 게임입니다.
-불변 도메인 모델과 포트-어댑터 패턴을 적용한 **헥사고날 아키텍처**로 구현되었습니다.
-
-### 개발 로드맵
-
-```mermaid
-graph LR
-    A[Phase 1-4: CLI 게임] --> B[Phase 5: 웹게임]
-    B --> C[Phase 6: 모바일 앱]
-    
-    style A fill:#90EE90
-    style B fill:#87CEEB
-    style C fill:#FFB6C1
-```
-
-**1차 목표**: CLI 기반 완성 (Phase 1-4)
-**2차 목표**: 웹게임 전환 (React + FastAPI)
-**최종 목표**: 모바일 앱 출시 (React Native, iOS/Android)
-
-## 주요 특징
-
-- 🎲 **D100 주사위 시스템**: 확률 기반 게임플레이
-- 🤖 **AI 경쟁자**: 지연 행동 시스템과 독립적 전략
-- 📊 **복잡한 경영 시뮬레이션**: 가격/품질/인지도 점수 시스템
-- 🏗️ **헥사고날 아키텍처**: 도메인 중심 설계, 테스트 가능한 구조
-- 🔒 **불변 도메인 모델**: `@dataclass(frozen=True)` 기반 안정성
-- 🧪 **AI 에이전트 통합**: GitHub Copilot 커스텀 에이전트와 스킬 활용
-- 🌐 **멀티 플랫폼**: CLI → 웹 → 모바일 단계적 확장
-
+치킨집 경영 시뮬레이션 웹 게임 — Python FastAPI + Vanilla JS SPA
 
 ## Quick Start
 
@@ -40,246 +8,99 @@ graph LR
 # 의존성 설치
 uv sync
 
-# 게임 실행 (개발 중)
-uv run python src/main.py
+# 서버 실행
+PYTHONPATH="src;." python -X utf8 web/main.py
 
-# 테스트 실행
-uv run pytest tests/
-
-# 도메인 모델 테스트
-uv run python tests/test_domain_models.py
-
-# GameLoopService 테스트
-uv run python test_game_loop_service.py
+# 브라우저에서 접속
+# http://localhost:8000/
 ```
 
-## 게임 규칙
+## 게임 개요
 
-상세한 게임 규칙은 **[README_GAME_RULES.md](README_GAME_RULES.md)** 참조
+4구간 하루 시스템으로 치킨집을 경영합니다.
 
-### 핵심 메커니즘
-- **턴 시스템**: 1턴 = 1일, 12시간 시간 자원
-- **6가지 행동**: 조리, 광고, 운영, 연구, 개인, 휴식
-- **5가지 스탯**: 요리, 경영, 서비스, 기술, 체력
-- **피로도/행복도**: 스탯과 행동에 영향
-- **AI 경쟁자**: 3~10턴 지연 반응, 파산 시스템
-- **고객 AI**: 10% 개별 AI + 90% 수치 고객
-- **점유율 시스템**: 가격/품질/인지도 기반
+| 구간 | 기본 시간 | 내용 |
+|------|-----------|------|
+| PREP (준비) | 3h (07~10시) | 재료 준비, 점검, 청소, 장비 점검 |
+| BUSINESS (영업) | 11h (10~21시) | 타임랩스 영업, 의사결정 이벤트 |
+| NIGHT (야간) | 3h (21~24시) | 연구, 학습, 운동, 광고, 재료 주문 |
+| SLEEP (수면) | 7h (24~07시) | 자동 피로 회복 → 다음 날 |
 
-
-## 프로젝트 구조
-
-```text
-.
-├── .github/
-│   ├── agents/              # GitHub Copilot 커스텀 에이전트
-│   ├── skills/              # 에이전트 스킬 (워크플로우)
-│   └── copilot-instructions.md
-├── AGENTS.md                # 에이전트 문서
-├── README_GAME_RULES.md     # 게임 규칙 상세 (필독!)
-├── TODO.md                  # 개발 계획
-├── configs/                 # 설정 파일
-├── data/                    # 게임 데이터 (이벤트 CSV 등)
-├── documents/               # 프로젝트 문서
-├── results/                 # 실험 결과 (JSON)
-├── src/
-│   ├── core/
-│   │   ├── domain/          # 도메인 엔티티 (11개 모델)
-│   │   └── ports/           # 포트 인터페이스 (미구현)
-│   ├── application/         # 응용 서비스
-│   ├── adapters/            # 어댑터 (I/O)
-│   ├── engine/              # 게임 엔진 (주사위, AI 등)
-│   ├── constants.py         # 게임 상수
-│   └── main.py              # 진입점
-├── tests/                   # 테스트 파일
-└── tools/                   # AI 에이전트 도구
-```
-
-### 아키텍처 계층
-
-**헥사고날 아키텍처 (Ports & Adapters)**
-```
-외부 세계
-    ↓
-Adapters (어댑터)
-    ↓
-Ports (인터페이스)
-    ↓
-Application (응용 서비스)
-    ↓
-Domain (도메인 모델) ← 핵심!
-```
-
-- **Domain**: 불변 엔티티, 비즈니스 로직
-- **Ports**: 인터페이스 정의 (의존성 역전)
-- **Application**: 유스케이스 구현
-- **Adapters**: 외부 시스템 통합 (DB, UI 등)
-
-
-## 개발 현황
-
-### ✅ 완료된 부분
-1. **도메인 모델** (11개 엔티티) - 100% 완성
-   - Player, Competitor, Store, Product, Recipe
-   - Research, Inventory, Customer, Event, Turn
-2. **상수 & Enum** - 게임 규칙 정의 완료
-3. **테스트** - 562줄 도메인 모델 단위 테스트
-4. **이벤트 시스템** - CSV 로더 & 13개 이벤트
-5. **응용 서비스** - GameLoop, Action, AI 서비스 구현
-
-### 🚧 진행 중
-- **포트 계층**: EventLoaderPort만 완성, 7개 미구현
-- **엔진 계층**: DiceSystem, AI 엔진 미구현
-- **저장소**: JSON 저장소 미구현
-- **UI**: CLI/GUI 미구현
-
-### 📋 다음 단계
-
-**Phase 1 (MVP - CLI)**: 1턴 플레이 가능
-1. `src/engine/dice_system.py` - D100 주사위 구현
-2. `src/core/ports/repository_port.py` - 저장 인터페이스
-3. `src/adapters/repository/json_repository.py` - JSON 저장소
-4. `src/adapters/ui/cli_adapter.py` - CLI 인터페이스
-5. `src/main.py` - 통합 및 DI 연결
-
-**Phase 5 (웹게임)**: 브라우저에서 플레이
-- FastAPI 백엔드 API 개발
-- React + TypeScript 프론트엔드
-- Vercel/Netlify 배포
-
-**Phase 6 (모바일 앱)**: 스토어 출시
-- React Native 크로스 플랫폼 앱
-- 터치 인터페이스 최적화
-- Google Play / App Store 출시
-
-**진척률**: 약 30-35% (Phase 1 기준)
-
-자세한 내용은 [TODO.md](TODO.md) 참조
-
-## 도메인 모델
-
-### 핵심 엔티티 (모두 `@dataclass(frozen=True)`)
-
-| 엔티티 | 파일 | 설명 |
-|--------|------|------|
-| Player | `player.py` | 플레이어 (5가지 스탯, 피로도, 자금) |
-| Competitor | `competitor.py` | 경쟁자 AI (지연 행동, 파산) |
-| Store | `store.py` | 매장 (임대료, 제품, 알바) |
-| Product | `product.py` | 제품 (가격, 품질, 인지도) |
-| Recipe | `recipe.py` | 레시피 (연구도) |
-| Research | `research.py` | 연구 (4가지 분야) |
-| Inventory | `inventory.py` | 재고 (FIFO Queue) |
-| Customer | `customer.py` | 고객 AI (욕구, 구매 판정) |
-| Event | `event.py` | 이벤트 (5가지 분류) |
-| Turn | `turn.py` | 턴 (6개 페이즈) |
-
-### 값 객체 (Value Objects)
-
-- `Money`: 자금
-- `Percentage`: 피로도, 행복도, 점유율
-- `StatValue`: 스탯 (값 + 경험치)
-- `Progress`: 연구 진행도
-- `Hours`: 시간 자원
-
-
-## AI 에이전트 (GitHub Copilot)
-
-프로젝트에는 GitHub Copilot 커스텀 에이전트가 포함되어 있습니다:
-
-| 에이전트 | 용도 |
-| :--- | :--- |
-| `@research-{model}` | 연구 (Gemini=구현, GPT=이론, Claude=안전성) |
-| `@fixer` | 자동 문제 해결 (버그, 테스트, 품질) |
-| `@planner-{model}` | 계획 수립 (Gemini=실현가능성, GPT=구조, Claude=리스크) |
-| `@orchestrator` | 자율 작업 관리자 |
-| `@code-generator` | 프로덕션 코드 생성 |
-| `@validator` | 아이디어 검증 |
-
-**사용 예시**:
-```
-@fixer 피로도 시스템 버그 수정
-@code-generator DiceSystem 구현
-@validator 점유율 계산 로직 검증
-```
-
-자세한 내용은 [AGENTS.md](AGENTS.md) 참조
-
-## Running the Game
-
-### 개발 환경
-
-```bash
-# 의존성 설치
-uv sync
-
-# 메인 게임 실행 (미완성)
-uv run python src/main.py
-
-# 도메인 모델 테스트
-uv run python tests/test_domain_models.py
-
-# 게임 루프 테스트
-uv run python test_game_loop_service.py
-```
-
-### 테스트
-
-```bash
-# 전체 테스트
-uv run pytest tests/
-
-# 특정 테스트
-uv run pytest tests/test_domain_models.py -v
-
-# 커버리지
-uv run pytest --cov=src tests/
-```
+상세 규칙: [README_GAME_RULES.md](README_GAME_RULES.md)
 
 ## 기술 스택
 
-- **언어**: Python 3.11+
-- **패키지 관리**: uv
-- **아키텍처**: 헥사고날 (Ports & Adapters)
-- **테스트**: pytest
-- **타입 체킹**: mypy (예정)
-- **AI**: GitHub Copilot 커스텀 에이전트
+- **Backend**: Python 3.11+, FastAPI, SQLite (WAL mode)
+- **Frontend**: Vanilla JS SPA (web/static/v2/)
+- **Architecture**: Hexagonal (Ports & Adapters) + DB-based GameService
 
+## 프로젝트 구조
 
-## 문서
+```
+web/
+├── app.py                  # FastAPI 앱 팩토리
+├── main.py                 # 서버 엔트리포인트
+├── config.py               # 설정 (DB 경로, CORS 등)
+├── api/
+│   ├── router.py           # API 라우터 통합
+│   └── game_router_v2.py   # v2 게임 API (/api/v2/games/...)
+├── services/
+│   ├── game_service.py     # 게임 오케스트레이터
+│   ├── balance.py          # 밸런스 수치 중앙 관리
+│   ├── serializers.py      # 도메인→JSON 직렬화
+│   └── engines/            # 순수 계산 로직
+│       ├── sales_engine.py
+│       └── decision_engine.py
+└── static/v2/              # 프론트엔드 SPA
+    ├── index.html
+    ├── app.js
+    ├── state.js
+    └── business.js
 
-- **[README_GAME_RULES.md](README_GAME_RULES.md)** - 게임 규칙 상세 (필독!)
-- **[AGENTS.md](AGENTS.md)** - AI 에이전트 문서
-- **[TODO.md](TODO.md)** - 개발 계획 및 진행 상황
-- **[documents/PROJECT.md](documents/PROJECT.md)** - 프로젝트 개요
-- **[TEMPLATE_GUIDE.md](TEMPLATE_GUIDE.md)** - 템플릿 가이드
+src/                        # 도메인 + 인프라
+├── core/domain/            # 불변 도메인 모델 (@dataclass frozen)
+├── core/ports/             # 포트 인터페이스 (ABC)
+├── application/            # 행동/AI/이벤트/판매/정산 서비스
+├── adapters/repository/    # SQLite 저장소
+└── common/enums/           # ActionType, EventType 등
 
-## 기여 가이드
+data/
+├── chickenmaster.db        # 게임 DB (자동 생성)
+└── events.csv              # 이벤트 데이터
+```
 
-1. **코드 스타일**
-   - 타입 힌팅 필수
-   - Docstring 작성 (한글)
-   - 불변 객체 원칙 준수
+## API (v2)
 
-2. **커밋 메시지**
-   ```
-   <type>: <subject>
-   
-   Types: feat, fix, docs, refactor, test, chore
-   ```
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| POST | `/api/v2/games` | 새 게임 생성 |
+| GET | `/api/v2/games/{id}` | 게임 상태 조회 |
+| DELETE | `/api/v2/games/{id}` | 게임 삭제 |
+| PUT | `/api/v2/games/{id}/time-config` | 시간 설정 변경 |
+| GET | `/api/v2/games/{id}/actions/available` | 사용 가능한 행동 목록 |
+| POST | `/api/v2/games/{id}/actions/queue` | 행동 큐잉 |
+| DELETE | `/api/v2/games/{id}/actions/queue/{slot}` | 큐에서 제거 |
+| POST | `/api/v2/games/{id}/segments/prep/confirm` | 준비 완료 → 영업 전환 |
+| POST | `/api/v2/games/{id}/business/start` | 영업 시작 (의사결정 생성) |
+| POST | `/api/v2/games/{id}/business/decisions/{did}` | A/B 선택 제출 |
+| POST | `/api/v2/games/{id}/business/complete` | 영업 완료 → 야간 전환 |
+| POST | `/api/v2/games/{id}/segments/night/confirm` | 야간 완료 → 수면 전환 |
+| POST | `/api/v2/games/{id}/sleep/execute` | 수면 실행 → 다음 날 |
 
-3. **브랜치 전략**
-   - `master`: 안정 버전
-   - `feature/<name>`: 새 기능
-   - `experiment/<name>`: 실험적 기능
+## 개발
+
+```bash
+# 테스트
+PYTHONPATH="src;." pytest tests/
+
+# 서버 (개발 모드 — auto-reload)
+PYTHONPATH="src;." uvicorn web.app:create_app --factory --reload
+```
+
+## 향후 계획
+
+[TODO.md](TODO.md) 참조
 
 ## 라이선스
 
 MIT License
-
-## 연락처
-
-이슈나 질문은 GitHub Issues에 등록해주세요.
-
----
-
-**🎮 즐거운 치킨집 경영 되세요! 🍗**

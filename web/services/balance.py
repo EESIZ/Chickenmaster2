@@ -11,7 +11,6 @@ game_service.py 및 기타 서비스에서 이 모듈을 import하여 사용합�
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 INITIAL_MONEY = 2_000_000          # 시작 자금 (원)
-INITIAL_STOCK = 20                 # 시작 재고
 INITIAL_INGREDIENT_QTY = 100       # 시작 재료
 INITIAL_INGREDIENT_QUALITY = 80    # 시작 재료 품질
 INGREDIENT_PURCHASE_PRICE = 5_000  # 재료 단가
@@ -202,3 +201,32 @@ FATIGUE_RECOVERY_PER_HOUR = 16   # 수면 시간당 피로 회복량
 PRICE_STEP = 1_000               # 가격 조절 단위
 PRICE_MIN = 5_000                # 최소 판매가
 PRICE_MAX = 100_000              # 최대 판매가
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 9. 신선도 시스템
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+INITIAL_FRESHNESS = 90
+FRESHNESS_MIN = 0
+FRESHNESS_MAX = 100
+ORDER_INGREDIENT_FRESHNESS = 100     # 새 주문 재료 신선도
+
+# 일일 감쇄: decay = BASE + (qty // DIVISOR) * PENALTY
+FRESHNESS_BASE_DECAY = 3
+FRESHNESS_QTY_DIVISOR = 50
+FRESHNESS_HOARDING_PENALTY = 2
+
+# 영업 보정: mult = clamp(freshness / BASE, FLOOR, CEILING)
+FRESHNESS_SALES_BASE = 80           # 80 = 1.0x
+FRESHNESS_SALES_FLOOR = 0.5
+FRESHNESS_SALES_CEILING = 1.2
+
+# 평판 페널티
+FRESHNESS_REPUTATION_THRESHOLD = 40
+FRESHNESS_REPUTATION_PENALTY = -2
+
+# 10. 돌아간 고객 평판 페널티
+# penalty = min(turned_away // DIVISOR, MAX)
+TURNAWAY_REP_DIVISOR = 5            # 5명당 -1 평판
+TURNAWAY_REP_MAX_PENALTY = 10       # 최대 -10

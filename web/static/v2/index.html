@@ -27,7 +27,8 @@
     <div id="screen-game" class="screen">
         <!-- 대시보드 -->
         <header id="dashboard" class="dashboard">
-            <div class="dash-row">
+            <!-- Row 1: 턴/날짜/판매가 -->
+            <div class="dash-row dash-row-top">
                 <div class="dash-item">
                     <span class="dash-label">턴</span>
                     <span id="dash-turn" class="dash-value">1</span>
@@ -36,53 +37,57 @@
                     <span class="dash-label">날짜</span>
                     <span id="dash-date" class="dash-value">-</span>
                 </div>
-                <div class="dash-item money">
-                    <span class="dash-label">자금</span>
-                    <span id="dash-money" class="dash-value">-</span>
-                </div>
-                <div class="dash-item">
-                    <span class="dash-label">재고</span>
-                    <span id="dash-stock" class="dash-value">-</span>
-                </div>
-                <div class="dash-item">
-                    <span class="dash-label">원재료</span>
-                    <span id="dash-ingredient" class="dash-value">-</span>
-                </div>
-                <div class="dash-item">
-                    <span class="dash-label">준비량</span>
-                    <span id="dash-prepared" class="dash-value">0</span>
-                </div>
-                <div class="dash-item">
-                    <span class="dash-label">평판</span>
-                    <span id="dash-reputation" class="dash-value">50</span>
+                <div class="dash-item price-section">
+                    <span class="dash-label">판매가</span>
+                    <span id="dash-price" class="dash-value">-</span>
+                    <button id="btn-price" class="btn btn-sm">변경</button>
                 </div>
             </div>
-            <div class="dash-row">
-                <div class="dash-item">
-                    <span class="dash-label">피로</span>
-                    <div class="bar-container">
-                        <div id="bar-fatigue" class="bar bar-fatigue" style="width:0%"></div>
-                    </div>
-                    <span id="dash-fatigue" class="dash-value-sm">0</span>
+            <!-- Row 2: 게이지 그리드 -->
+            <div class="dash-gauges">
+                <div class="gauge-item" data-gauge="money">
+                    <div class="gauge-header"><span class="gauge-icon">💰</span> <span class="gauge-label">자금</span></div>
+                    <div class="gauge-value" id="dash-money">-</div>
                 </div>
-                <div class="dash-item">
-                    <span class="dash-label">행복</span>
-                    <div class="bar-container">
-                        <div id="bar-happiness" class="bar bar-happiness" style="width:50%"></div>
-                    </div>
-                    <span id="dash-happiness" class="dash-value-sm">50</span>
+                <div class="gauge-item" data-gauge="ingredient">
+                    <div class="gauge-header"><span class="gauge-icon">🥩</span> <span class="gauge-label">원재료</span></div>
+                    <div class="gauge-bar-container"><div id="bar-ingredient" class="gauge-bar" style="width:50%;background:var(--blue)"></div></div>
+                    <div class="gauge-value" id="dash-ingredient">-</div>
                 </div>
+                <div class="gauge-item" data-gauge="prepared">
+                    <div class="gauge-header"><span class="gauge-icon">🍗</span> <span class="gauge-label">준비량</span></div>
+                    <div class="gauge-bar-container"><div id="bar-prepared" class="gauge-bar" style="width:0%;background:var(--orange)"></div></div>
+                    <div class="gauge-value" id="dash-prepared">0</div>
+                </div>
+                <div class="gauge-item" data-gauge="freshness">
+                    <div class="gauge-header"><span class="gauge-icon">✨</span> <span class="gauge-label">신선도</span></div>
+                    <div class="gauge-bar-container"><div id="bar-freshness" class="gauge-bar" style="width:90%;background:var(--green)"></div></div>
+                    <div class="gauge-value" id="dash-freshness">90</div>
+                </div>
+                <div class="gauge-item" data-gauge="reputation">
+                    <div class="gauge-header"><span class="gauge-icon">⭐</span> <span class="gauge-label">평판</span></div>
+                    <div class="gauge-bar-container"><div id="bar-reputation" class="gauge-bar" style="width:50%;background:var(--purple)"></div></div>
+                    <div class="gauge-value" id="dash-reputation">50</div>
+                </div>
+                <div class="gauge-item" data-gauge="fatigue">
+                    <div class="gauge-header"><span class="gauge-icon">😰</span> <span class="gauge-label">피로</span></div>
+                    <div class="gauge-bar-container"><div id="bar-fatigue" class="gauge-bar" style="width:0%;background:var(--red)"></div></div>
+                    <div class="gauge-value" id="dash-fatigue">0</div>
+                </div>
+                <div class="gauge-item" data-gauge="happiness">
+                    <div class="gauge-header"><span class="gauge-icon">😊</span> <span class="gauge-label">행복</span></div>
+                    <div class="gauge-bar-container"><div id="bar-happiness" class="gauge-bar" style="width:50%;background:var(--green)"></div></div>
+                    <div class="gauge-value" id="dash-happiness">50</div>
+                </div>
+            </div>
+            <!-- Row 3: 스탯 한 줄 -->
+            <div class="dash-row dash-stats-row">
                 <div class="stat-group">
                     <span class="stat" title="요리">🍳<span id="stat-cooking">10</span></span>
                     <span class="stat" title="경영">📊<span id="stat-management">8</span></span>
                     <span class="stat" title="서비스">💁<span id="stat-service">8</span></span>
                     <span class="stat" title="기술">🔧<span id="stat-tech">5</span></span>
                     <span class="stat" title="체력">💪<span id="stat-stamina">50</span></span>
-                </div>
-                <div class="dash-item price-section">
-                    <span class="dash-label">판매가</span>
-                    <span id="dash-price" class="dash-value">-</span>
-                    <button id="btn-price" class="btn btn-sm">변경</button>
                 </div>
             </div>
         </header>

@@ -86,9 +86,9 @@ CREATE TABLE IF NOT EXISTS turns (
 CREATE TABLE IF NOT EXISTS game_state (
     game_id         TEXT PRIMARY KEY REFERENCES games(id),
     remaining_hours INTEGER DEFAULT 12,
-    stock           INTEGER DEFAULT 20,
     ingredient_qty  INTEGER DEFAULT 100,
     prepared_qty    INTEGER DEFAULT 0,
+    ingredient_freshness REAL DEFAULT 90.0,
     reputation      INTEGER DEFAULT 50,
     wake_time       INTEGER DEFAULT 7,
     open_time       INTEGER DEFAULT 10,
@@ -221,7 +221,7 @@ class SQLiteRepository(RepositoryPort):
         conn = self._get_conn()
         try:
             rows = conn.execute(
-                "SELECT g.*, gs.remaining_hours, gs.stock, gs.ingredient_qty "
+                "SELECT g.*, gs.remaining_hours, gs.ingredient_qty "
                 "FROM games g LEFT JOIN game_state gs ON g.id=gs.game_id "
                 "WHERE g.is_active=1 ORDER BY g.created_at DESC"
             ).fetchall()
@@ -549,7 +549,7 @@ class SQLiteRepository(RepositoryPort):
     def load_turn_analysis_history(self, player_id: UUID, limit: int) -> List[Dict[str, Any]]:
         return []
 
-    # ── Game State (remaining_hours, stock, ingredient_qty) ──
+    # ── Game State (remaining_hours, ingredient_qty, freshness) ──
 
     def get_game_state(self, game_id: str) -> Optional[Dict[str, Any]]:
         conn = self._get_conn()

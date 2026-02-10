@@ -25,11 +25,12 @@ def create_app() -> FastAPI:
     static_dir = Path(__file__).parent / "static"
     v2_dir = static_dir / "v2"
 
-    # v2 SPA (카드 기반 UI)
+    # v2 SPA (카드 기반 UI) — /v2 경로 유지 (하위 호환)
     if v2_dir.exists():
         app.mount("/v2", StaticFiles(directory=str(v2_dir), html=True), name="static-v2")
 
-    # v1 SPA (기존)
-    app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
+    # v2를 루트(/)로 서빙
+    if v2_dir.exists():
+        app.mount("/", StaticFiles(directory=str(v2_dir), html=True), name="static-root")
 
     return app

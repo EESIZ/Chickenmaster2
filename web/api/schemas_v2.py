@@ -38,9 +38,9 @@ class GameStateResponse(BaseModel):
     store: Optional[Dict[str, Any]] = None
     turn: Optional[Dict[str, Any]] = None
     is_running: bool
-    stock: int
     ingredient_qty: int
     prepared_qty: int = 0
+    ingredient_freshness: float = 90.0
     reputation: int = 50
     current_segment: str = "PREP"
     current_phase: str = "PREP"  # backwards compat
@@ -69,17 +69,17 @@ class QueueResponse(BaseModel):
 class ConfirmResponse(BaseModel):
     success: bool
     action_results: List[Dict[str, Any]]
-    stock: Optional[int] = None
     ingredient_qty: Optional[int] = None
     prepared_qty: Optional[int] = None
+    ingredient_freshness: Optional[float] = None
     current_segment: str
 
 
 class BusinessStartResponse(BaseModel):
     business_hours: int
     prepared_qty: int
-    stock: int
     ingredient_qty: int
+    ingredient_freshness: float
     decisions: List[Dict[str, Any]]
     current_segment: str
 
@@ -93,9 +93,9 @@ class DecisionResponse(BaseModel):
 
 class BusinessSummaryResponse(BaseModel):
     summary: Dict[str, Any]
-    stock: int
     prepared_qty: int
     ingredient_qty: int
+    ingredient_freshness: float
     current_segment: str
     player: Optional[Dict[str, Any]] = None
     ai_result: Optional[Dict[str, Any]] = None
@@ -107,6 +107,7 @@ class SleepResponse(BaseModel):
     sleep_hours: int
     fatigue_recovered: int
     new_fatigue: float
+    ingredient_freshness: float
     turn_number: int
     game_date: str
     current_segment: str
@@ -122,5 +123,4 @@ class GameListItem(BaseModel):
     player_name: str
     created_at: Optional[str] = None
     remaining_hours: Optional[int] = None
-    stock: Optional[int] = None
     ingredient_qty: Optional[int] = None

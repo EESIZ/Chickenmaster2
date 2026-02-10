@@ -45,12 +45,19 @@ const PhaseCards = {
                 '</div>';
         }
 
+        const freshMult = s.freshness_mult != null ? `(x${s.freshness_mult})` : '';
+        const turnedAway = s.turned_away || 0;
+        const turnawayHtml = turnedAway > 0
+            ? `<p class="result-line" style="color:var(--red)">돌아간 고객: ${turnedAway}명 (평판 -${s.turnaway_rep_penalty || 0})</p>`
+            : '';
+
         body.innerHTML = `
             <p class="result-line">영업 시간: <span class="result-highlight">${s.business_hours || 0}시간</span></p>
-            <p class="result-line">총 고객: <span class="result-highlight">${s.total_customers || 0}명</span></p>
+            <p class="result-line">총 고객: <span class="result-highlight">${s.total_customers || 0}명</span> ${freshMult}</p>
             <p class="result-line">실제 판매: <span class="result-highlight">${s.actual_served || 0}명</span></p>
+            ${turnawayHtml}
             <p class="result-line">총 매출: <span style="color:${profitColor};font-weight:700">\u20A9${(s.total_sales || 0).toLocaleString()}</span></p>
-            <p class="result-line">재고 사용: ${s.stock_used || 0} | 준비량 사용: ${s.prepared_used || 0}</p>
+            <p class="result-line">준비량 사용: ${s.prepared_used || 0}</p>
             ${decisionsHtml}
         `;
     },
