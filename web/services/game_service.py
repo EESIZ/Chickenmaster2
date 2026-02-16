@@ -3,6 +3,7 @@
 import io
 import json
 import os
+import random
 import sys
 from contextlib import contextmanager
 from datetime import date
@@ -26,7 +27,7 @@ from web.services.balance import (
     FRESHNESS_REPUTATION_THRESHOLD, FRESHNESS_REPUTATION_PENALTY,
     TURNAWAY_REP_DIVISOR, TURNAWAY_REP_MAX_PENALTY,
 )
-from web.services.engines.sales_engine import calculate_sales
+from web.services.engines.sales_engine import calculate_sales, generate_hourly_forecast
 from web.services.engines.decision_engine import generate_decisions, apply_decision_effects
 
 
@@ -575,11 +576,34 @@ class GameService:
         ingredient_qty = gs["ingredient_qty"]
         prepared_qty = gs["prepared_qty"]
 
+        # 스탯 읽기 (d100 주사위 보정용)
+        stats = {
+            "cooking": player.cooking.base_value,
+            "management": player.management.base_value,
+            "service": player.service.base_value,
+            "tech": player.tech.base_value,
+            "stamina": player.stamina.base_value,
+        }
+
+        # 행동별 관련 스탯 매핑
+        ACTION_STAT = {
+            "PREPARE_INGREDIENTS": "cooking",
+            "INSPECT_INGREDIENTS": "cooking",
+            "CLEAN": "service",
+            "EQUIPMENT_CHECK": "tech",
+        }
+
         for qa in queued:
             at = ACTION_TYPE_MAP.get(qa["action_type"])
             if not at:
                 results.append({"success": False, "message": f"잘못된 행동: {qa['action_type']}"})
                 continue
+
+            # D100 주사위 + 스탯 기반 보정
+            dice_roll = random.randint(1, 100)
+            stat_key = ACTION_STAT.get(qa["specific_action"], "cooking")
+            stat_value = stats.get(stat_key, 10)
+            dice_factor = max(0.5, (stat_value + dice_roll) / 100)  # 스탯+주사위 합산 %
 
             domain_req = DomainActionRequest(
                 player_id=player.id,
@@ -596,9 +620,18 @@ class GameService:
                 effect = STOCK_EFFECTS.get(qa["specific_action"], {})
                 ingredient_qty -= effect.get("ingredient_cost", 0)
                 ingredient_qty += effect.get("ingredient_gain", 0)
-                prepared_qty += effect.get("prepared_gain", 0)
+
+                # Dice affects prepared_qty gain
+                base_prepared = effect.get("prepared_gain", 0)
+                if base_prepared > 0:
+                    prepared_qty += max(1, int(base_prepared * dice_factor))
+                else:
+                    prepared_qty += base_prepared
 
             player = repo.get_player_by_game(game_id)
+
+            # D100 quality label
+            dice_quality = "CRITICAL!" if dice_roll >= 95 else "GREAT" if dice_roll >= 75 else "GOOD" if dice_roll >= 40 else "MISS" if dice_roll <= 5 else "normal"
 
             results.append({
                 "success": result.success,
@@ -607,6 +640,9 @@ class GameService:
                 "fatigue_change": result.fatigue_change,
                 "money_change": result.money_change,
                 "experience_gains": result.experience_gains,
+                "dice_roll": dice_roll,
+                "dice_factor": round(dice_factor, 2),
+                "dice_quality": dice_quality,
             })
 
         # Update state → transition to BUSINESS
@@ -657,13 +693,31 @@ class GameService:
                 **decision,
             })
 
+        # Generate hourly forecast for client timelapse
+        product = repo.get_product_by_game(game_id)
+        price = product.selling_price.amount if product else INITIAL_SELLING_PRICE
+        hourly_forecast = generate_hourly_forecast(
+            business_hours=business_hours,
+            reputation=gs["reputation"],
+            prepared_qty=gs["prepared_qty"],
+            ingredient_freshness=gs["ingredient_freshness"],
+            price=price,
+        )
+
         return {
             "business_hours": business_hours,
             "prepared_qty": gs["prepared_qty"],
             "ingredient_qty": gs["ingredient_qty"],
             "ingredient_freshness": gs["ingredient_freshness"],
             "decisions": decisions,
+            "hourly_forecast": hourly_forecast,
+            "price": price,
             "current_segment": "BUSINESS",
+            "balance": {
+                "prepare_gain": PREPARE_GAIN,
+                "prepare_cost": PREPARE_INGREDIENT_COST,
+                "rest_fatigue_recovery": 16,
+            },
         }
 
     # ── Submit decision ──
@@ -726,11 +780,21 @@ class GameService:
         repo.update_game_state(game_id, **update_kwargs)
         repo.update_business_decision(decision_id, choice, effect)
 
+        # Re-read state after updates for accurate response
+        gs_after = repo.get_game_state(game_id)
+
         return {
             "decision_id": decision_id,
             "choice": choice,
             "effect": effect,
             "label": target["choice_a_label"] if choice == "A" else target["choice_b_label"],
+            # 클라이언트 상태 동기화용 — SSOT
+            "prepared_qty": gs_after["prepared_qty"],
+            "ingredient_qty": gs_after["ingredient_qty"],
+            "ingredient_freshness": gs_after["ingredient_freshness"],
+            "reputation": gs_after["reputation"],
+            "money": player.money.amount,
+            "fatigue": player.fatigue.value,
         }
 
     # ── Complete business → NIGHT ──
@@ -892,6 +956,64 @@ class GameService:
             "settlement_result": settlement_result,
         }
 
+    # ── Business mid-action (PREPARE or REST during business) ──
+
+    def business_action(self, game_id: str, action: str) -> Dict[str, Any]:
+        """영업 중 재료 준비 또는 휴식 (1시간 소모)"""
+        repo = self._repo(game_id)
+        gs = repo.get_game_state(game_id)
+        player = repo.get_player_by_game(game_id)
+        if not gs or not player:
+            raise ValueError("게임을 찾을 수 없습니다")
+        if gs["current_segment"] != "BUSINESS":
+            raise ValueError("영업 구간이 아닙니다")
+
+        from core.domain.value_objects import Money, Percentage
+
+        ingredient_qty = gs["ingredient_qty"]
+        prepared_qty = gs["prepared_qty"]
+        fatigue = player.fatigue.value
+        message = ""
+
+        if action == "PREPARE":
+            if ingredient_qty < PREPARE_INGREDIENT_COST:
+                raise ValueError("원재료가 부족합니다")
+            ingredient_qty -= PREPARE_INGREDIENT_COST
+            prepared_qty += PREPARE_GAIN
+            fatigue = min(200, fatigue + 3)  # cooking fatigue per hour
+            player = player.gain_stat_experience("cooking", 8)
+            message = f"재료 준비 완료! 준비량 +{PREPARE_GAIN}"
+        elif action == "REST":
+            fatigue = max(0, fatigue - 16)  # rest recovery per hour
+            player = player.gain_stat_experience("stamina", 8)
+            message = "휴식 완료! 피로 회복"
+        else:
+            raise ValueError(f"잘못된 행동: {action}")
+
+        # Update player fatigue + exp
+        player = player._replace(fatigue=Percentage(fatigue))
+        repo.save_player(player)
+
+        # Update game state
+        hours_used = gs.get("segment_hours_used", 0) + 1
+        repo.update_game_state(game_id,
+            ingredient_qty=ingredient_qty,
+            prepared_qty=prepared_qty,
+            segment_hours_used=hours_used,
+        )
+
+        from web.services.serializers import serialize_player
+
+        return {
+            "action": action,
+            "prepared_qty": prepared_qty,
+            "ingredient_qty": ingredient_qty,
+            "fatigue": round(fatigue, 1),
+            "hours_used": hours_used,
+            "message": message,
+            "player": serialize_player(player),
+        }
+
     # ── Night confirm → SLEEP ──
 
     def confirm_night_actions(self, game_id: str) -> Dict[str, Any]:
@@ -918,11 +1040,41 @@ class GameService:
         ingredient_qty = gs["ingredient_qty"]
         ingredient_freshness = gs["ingredient_freshness"]
 
+        # 스탯 읽기 (d100 주사위 보정용)
+        stats = {
+            "cooking": player.stats.get("cooking", {}).get("level", 10) if hasattr(player, 'stats') and isinstance(player.stats, dict) else 10,
+            "management": player.stats.get("management", {}).get("level", 8) if hasattr(player, 'stats') and isinstance(player.stats, dict) else 8,
+            "service": player.stats.get("service", {}).get("level", 8) if hasattr(player, 'stats') and isinstance(player.stats, dict) else 8,
+            "tech": player.stats.get("tech", {}).get("level", 5) if hasattr(player, 'stats') and isinstance(player.stats, dict) else 5,
+            "stamina": player.stats.get("stamina", {}).get("level", 50) if hasattr(player, 'stats') and isinstance(player.stats, dict) else 50,
+        }
+
+        # 야간 행동별 관련 스탯 매핑
+        ACTION_STAT = {
+            "RECIPE": "cooking",
+            "MANAGEMENT": "management",
+            "ADVERTISING_RESEARCH": "management",
+            "SERVICE": "service",
+            "STUDY": "tech",
+            "EXERCISE": "stamina",
+            "FLYER": "management",
+            "ONLINE_AD": "tech",
+            "DELIVERY_APP": "tech",
+            "ORDER_INGREDIENTS": "management",
+            "HIRE_PARTTIME": "management",
+        }
+
         for qa in queued:
             at = ACTION_TYPE_MAP.get(qa["action_type"])
             if not at:
                 results.append({"success": False, "message": f"잘못된 행동: {qa['action_type']}"})
                 continue
+
+            # D100 주사위 + 스탯 기반 보정
+            dice_roll = random.randint(1, 100)
+            stat_key = ACTION_STAT.get(qa["specific_action"], "management")
+            stat_value = stats.get(stat_key, 10)
+            dice_factor = max(0.5, (stat_value + dice_roll) / 100)
 
             domain_req = DomainActionRequest(
                 player_id=player.id,
@@ -949,6 +1101,8 @@ class GameService:
 
             player = repo.get_player_by_game(game_id)
 
+            dice_quality = "CRITICAL!" if dice_roll >= 95 else "GREAT" if dice_roll >= 75 else "GOOD" if dice_roll >= 40 else "MISS" if dice_roll <= 5 else "normal"
+
             results.append({
                 "success": result.success,
                 "message": result.message,
@@ -956,6 +1110,9 @@ class GameService:
                 "fatigue_change": result.fatigue_change,
                 "money_change": result.money_change,
                 "experience_gains": result.experience_gains,
+                "dice_roll": dice_roll,
+                "dice_factor": round(dice_factor, 2),
+                "dice_quality": dice_quality,
             })
 
         repo.update_game_state(game_id,

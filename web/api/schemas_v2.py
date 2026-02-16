@@ -30,6 +30,10 @@ class DecisionChoiceRequest(BaseModel):
     choice: Literal["A", "B"]
 
 
+class BusinessActionRequest(BaseModel):
+    action: Literal["PREPARE", "REST"]
+
+
 # ── 응답 ──
 
 class GameStateResponse(BaseModel):
@@ -81,7 +85,10 @@ class BusinessStartResponse(BaseModel):
     ingredient_qty: int
     ingredient_freshness: float
     decisions: List[Dict[str, Any]]
+    hourly_forecast: Optional[List[Dict[str, Any]]] = None
+    price: int = 8000
     current_segment: str
+    balance: Optional[Dict[str, Any]] = None
 
 
 class DecisionResponse(BaseModel):
@@ -89,6 +96,13 @@ class DecisionResponse(BaseModel):
     choice: str
     effect: Dict[str, Any]
     label: str
+    # SSOT — 클라이언트 상태 동기화
+    prepared_qty: Optional[int] = None
+    ingredient_qty: Optional[int] = None
+    ingredient_freshness: Optional[float] = None
+    reputation: Optional[int] = None
+    money: Optional[int] = None
+    fatigue: Optional[float] = None
 
 
 class BusinessSummaryResponse(BaseModel):
@@ -101,6 +115,16 @@ class BusinessSummaryResponse(BaseModel):
     ai_result: Optional[Dict[str, Any]] = None
     event_result: Optional[Dict[str, Any]] = None
     settlement_result: Optional[Dict[str, Any]] = None
+
+
+class BusinessActionResponse(BaseModel):
+    action: str
+    prepared_qty: int
+    ingredient_qty: int
+    fatigue: float
+    hours_used: int
+    message: str
+    player: Optional[Dict[str, Any]] = None
 
 
 class SleepResponse(BaseModel):

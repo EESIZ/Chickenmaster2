@@ -27,8 +27,12 @@ const Timeline = {
             slot.dataset.slot = item.slot_order;
             slot.style.width = `${(item.hours / this.totalHours) * 100}%`;
             slot.style.flex = 'none';
+            const iconName = this._getCategoryIcon(item.action_type);
+            const iconHtml = iconName
+                ? `<img class="pixel-sprite" src="${Sprites.get(iconName)}" style="width:16px;height:16px;margin-right:4px;vertical-align:middle">`
+                : '';
             slot.innerHTML = `
-                ${item.name} ${item.hours}h
+                ${iconHtml}${item.name} ${item.hours}h
                 <span class="slot-remove">&times;</span>
             `;
             slot.addEventListener('click', () => this.onRemove(item.slot_order));
@@ -61,8 +65,21 @@ const Timeline = {
         if (btn) btn.disabled = false;
     },
 
+    _getCategoryIcon(cat) {
+        const map = {
+            'COOKING': 'icon_cooking',
+            'ADVERTISING': 'icon_ad',
+            'OPERATION': 'icon_operation',
+            'RESEARCH': 'icon_research',
+            'PERSONAL': 'icon_personal',
+            'REST': 'icon_rest',
+        };
+        return map[cat] || null;
+    },
+
     async onRemove(slotOrder) {
         if (!GameState.gameId) return;
+        SFX.play('queue_remove');
         try {
             const data = await API.removeFromQueue(GameState.gameId, slotOrder);
             this.render(data.queue, data.segment_hours);

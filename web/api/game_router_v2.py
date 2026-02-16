@@ -4,10 +4,10 @@ from fastapi import APIRouter, HTTPException
 
 from web.api.schemas_v2 import (
     CreateGameRequest, QueueActionRequest, PriceChangeRequest,
-    TimeConfigRequest, DecisionChoiceRequest,
+    TimeConfigRequest, DecisionChoiceRequest, BusinessActionRequest,
     GameStateResponse, QueueResponse, ConfirmResponse,
     BusinessStartResponse, DecisionResponse, BusinessSummaryResponse,
-    SleepResponse, TimeConfigResponse, GameListItem,
+    BusinessActionResponse, SleepResponse, TimeConfigResponse, GameListItem,
 )
 from web.services.game_service import GameService
 
@@ -130,6 +130,15 @@ def complete_business(game_id: str):
     """영업 종료 → 요약 + 야간으로"""
     try:
         return _svc().complete_business(game_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@router.post("/{game_id}/business/action", response_model=BusinessActionResponse)
+def business_action(game_id: str, req: BusinessActionRequest):
+    """영업 중 재료 준비 또는 휴식 (1시간 소모)"""
+    try:
+        return _svc().business_action(game_id, req.action)
     except ValueError as e:
         raise HTTPException(400, str(e))
 

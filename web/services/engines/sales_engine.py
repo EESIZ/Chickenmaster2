@@ -1,5 +1,6 @@
 """영업 판매량/매출 계산 — 순수 함수, DB 접근 없음"""
 
+import random
 from typing import Dict, Any, List
 
 from web.services.balance import (
@@ -90,3 +91,47 @@ def calculate_sales(
         "total_sales": total_sales,
         "stock_cost_from_decisions": stock_cost_from_decisions,
     }
+
+
+def generate_hourly_forecast(
+    business_hours: int,
+    reputation: int,
+    prepared_qty: int,
+    ingredient_freshness: float,
+    price: int,
+) -> List[Dict[str, Any]]:
+    """
+    영업 시간별 고객/매출 예측 데이터를 생성합니다.
+    클라이언트 타임랩스에서 서버 로직과 일관된 수치를 보여주기 위함.
+
+    Returns:
+        시간별 데이터 리스트: [{hour, customers, served, turned, revenue, remaining_prepared}]
+    """
+    freshness_mult = max(
+        FRESHNESS_SALES_FLOOR,
+        min(FRESHNESS_SALES_CEILING, ingredient_freshness / FRESHNESS_SALES_BASE),
+    )
+    base_per_hour = CUSTOMERS_PER_HOUR * (reputation / REPUTATION_BASE) * freshness_mult
+
+    remaining = prepared_qty
+    hourly = []
+
+    for h in range(1, business_hours + 1):
+        # Add small variance per hour (±30%) for natural feel
+        variance = 0.7 + random.random() * 0.6
+        customers = max(1, int(base_per_hour * variance))
+        served = min(customers, remaining)
+        turned = customers - served
+        remaining -= served
+        revenue = served * price
+
+        hourly.append({
+            "hour": h,
+            "customers": customers,
+            "served": served,
+            "turned": turned,
+            "revenue": revenue,
+            "remaining_prepared": remaining,
+        })
+
+    return hourly

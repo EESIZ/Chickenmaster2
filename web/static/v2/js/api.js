@@ -53,6 +53,12 @@ const API = {
         });
     },
     completeBusiness(id) { return this._fetch(`${this.base}/${id}/business/complete`, { method:'POST' }); },
+    businessAction(id, action) {
+        return this._fetch(`${this.base}/${id}/business/action`, {
+            method:'POST',
+            body:JSON.stringify({ action }),
+        });
+    },
     confirmNight(id)     { return this._fetch(`${this.base}/${id}/segments/night/confirm`, { method:'POST' }); },
     executeSleep(id)     { return this._fetch(`${this.base}/${id}/sleep/execute`, { method:'POST' }); },
 

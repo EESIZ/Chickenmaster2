@@ -10,6 +10,10 @@
     <!-- 타이틀 화면 -->
     <div id="screen-title" class="screen active">
         <div class="title-container">
+            <div id="title-particles" class="title-particles"></div>
+            <div id="mascot-container" class="mascot-container">
+                <img id="mascot-img" class="pixel-sprite" alt="mascot">
+            </div>
             <h1 class="game-title">치킨마스터 2</h1>
             <p class="game-subtitle">당신만의 치킨 제국을 만들어보세요</p>
             <div class="title-form">
@@ -23,27 +27,31 @@
         </div>
     </div>
 
-    <!-- 메인 게임 화면 -->
+    <!-- 메인 게임 화면 (VN 레이아웃) -->
     <div id="screen-game" class="screen">
-        <!-- 대시보드 -->
-        <header id="dashboard" class="dashboard">
-            <!-- Row 1: 턴/날짜/판매가 -->
-            <div class="dash-row dash-row-top">
-                <div class="dash-item">
-                    <span class="dash-label">턴</span>
-                    <span id="dash-turn" class="dash-value">1</span>
-                </div>
-                <div class="dash-item">
-                    <span class="dash-label">날짜</span>
-                    <span id="dash-date" class="dash-value">-</span>
-                </div>
-                <div class="dash-item price-section">
-                    <span class="dash-label">판매가</span>
-                    <span id="dash-price" class="dash-value">-</span>
-                    <button id="btn-price" class="btn btn-sm">변경</button>
-                </div>
+
+        <!-- VN HUD — 상단 바 -->
+        <header id="vn-hud" class="vn-hud">
+            <div class="hud-left">
+                <span class="hud-item hud-day">Day <span id="hud-turn">1</span></span>
+                <span class="hud-item hud-segment" id="hud-segment">준비</span>
             </div>
-            <!-- Row 2: 게이지 그리드 -->
+            <div class="hud-center">
+                <span class="hud-item hud-money" id="hud-money">₩0</span>
+            </div>
+            <div class="hud-right">
+                <span class="hud-item">준비 <span id="hud-prepared" class="hud-val">0</span></span>
+                <span class="hud-item">피로 <span id="hud-fatigue" class="hud-val">0</span></span>
+                <span class="hud-item">평판 <span id="hud-reputation" class="hud-val">50</span></span>
+                <button id="hud-expand" class="btn btn-sm hud-btn">▲</button>
+                <button id="btn-price" class="btn btn-sm hud-btn">💰</button>
+                <button id="btn-bgm" class="btn btn-sm hud-btn">🔇</button>
+                <button id="btn-sfx" class="btn btn-sm hud-btn">SFX</button>
+            </div>
+        </header>
+
+        <!-- 상세 패널 (기본 표시) -->
+        <div id="vn-detail-panel" class="vn-detail-panel">
             <div class="dash-gauges">
                 <div class="gauge-item" data-gauge="money">
                     <div class="gauge-header"><span class="gauge-icon">💰</span> <span class="gauge-label">자금</span></div>
@@ -80,118 +88,99 @@
                     <div class="gauge-value" id="dash-happiness">50</div>
                 </div>
             </div>
-            <!-- Row 3: 스탯 한 줄 -->
-            <div class="dash-row dash-stats-row">
-                <div class="stat-group">
-                    <span class="stat" title="요리">🍳<span id="stat-cooking">10</span></span>
-                    <span class="stat" title="경영">📊<span id="stat-management">8</span></span>
-                    <span class="stat" title="서비스">💁<span id="stat-service">8</span></span>
-                    <span class="stat" title="기술">🔧<span id="stat-tech">5</span></span>
-                    <span class="stat" title="체력">💪<span id="stat-stamina">50</span></span>
+            <div class="dash-stats-grid">
+                <div class="stat-card" data-stat="cooking">
+                    <div class="stat-header"><span class="stat-label">요리</span> <span class="stat-level" id="stat-cooking">Lv.10</span></div>
+                    <div class="stat-exp-bar-container"><div class="stat-exp-bar" id="exp-bar-cooking" style="width:0%;background:var(--orange)"></div></div>
+                    <div class="stat-exp-text" id="exp-text-cooking">0/100</div>
+                </div>
+                <div class="stat-card" data-stat="management">
+                    <div class="stat-header"><span class="stat-label">경영</span> <span class="stat-level" id="stat-management">Lv.8</span></div>
+                    <div class="stat-exp-bar-container"><div class="stat-exp-bar" id="exp-bar-management" style="width:0%;background:var(--blue)"></div></div>
+                    <div class="stat-exp-text" id="exp-text-management">0/100</div>
+                </div>
+                <div class="stat-card" data-stat="service">
+                    <div class="stat-header"><span class="stat-label">서비스</span> <span class="stat-level" id="stat-service">Lv.8</span></div>
+                    <div class="stat-exp-bar-container"><div class="stat-exp-bar" id="exp-bar-service" style="width:0%;background:var(--green)"></div></div>
+                    <div class="stat-exp-text" id="exp-text-service">0/100</div>
+                </div>
+                <div class="stat-card" data-stat="tech">
+                    <div class="stat-header"><span class="stat-label">기술</span> <span class="stat-level" id="stat-tech">Lv.5</span></div>
+                    <div class="stat-exp-bar-container"><div class="stat-exp-bar" id="exp-bar-tech" style="width:0%;background:var(--purple)"></div></div>
+                    <div class="stat-exp-text" id="exp-text-tech">0/100</div>
+                </div>
+                <div class="stat-card" data-stat="stamina">
+                    <div class="stat-header"><span class="stat-label">체력</span> <span class="stat-level" id="stat-stamina">Lv.50</span></div>
+                    <div class="stat-exp-bar-container"><div class="stat-exp-bar" id="exp-bar-stamina" style="width:0%;background:var(--red)"></div></div>
+                    <div class="stat-exp-text" id="exp-text-stamina">0/100</div>
                 </div>
             </div>
-        </header>
-
-        <!-- 4구간 인디케이터 -->
-        <div id="segment-indicator" class="segment-indicator">
-            <span class="seg-badge" data-seg="PREP">🌅 준비</span>
-            <span class="seg-arrow">&rarr;</span>
-            <span class="seg-badge" data-seg="BUSINESS">🏪 영업</span>
-            <span class="seg-arrow">&rarr;</span>
-            <span class="seg-badge" data-seg="NIGHT">🌙 야간</span>
-            <span class="seg-arrow">&rarr;</span>
-            <span class="seg-badge" data-seg="SLEEP">😴 수면</span>
-        </div>
-
-        <!-- 24시간 타임라인 바 -->
-        <div id="day-timeline" class="day-timeline">
-            <div class="day-bar">
-                <div id="seg-bar-PREP" class="seg-bar seg-prep"></div>
-                <div id="seg-bar-BUSINESS" class="seg-bar seg-business"></div>
-                <div id="seg-bar-NIGHT" class="seg-bar seg-night"></div>
-                <div id="seg-bar-SLEEP" class="seg-bar seg-sleep"></div>
-            </div>
-            <div class="day-labels">
-                <span id="label-wake">7:00</span>
-                <span id="label-open">10:00</span>
-                <span id="label-close">21:00</span>
-                <span id="label-sleep">24:00</span>
+            <div id="segment-indicator" class="segment-indicator">
+                <span class="seg-badge" data-seg="PREP">🌅 준비</span>
+                <span class="seg-arrow">&rarr;</span>
+                <span class="seg-badge" data-seg="BUSINESS">🏪 영업</span>
+                <span class="seg-arrow">&rarr;</span>
+                <span class="seg-badge" data-seg="NIGHT">🌙 야간</span>
+                <span class="seg-arrow">&rarr;</span>
+                <span class="seg-badge" data-seg="SLEEP">😴 수면</span>
             </div>
         </div>
 
-        <!-- 준비/야간 행동 영역 -->
-        <div id="area-action" class="game-area">
-            <div id="timeline" class="timeline">
-                <div class="timeline-header">
-                    <h3 id="timeline-title">준비 시간표</h3>
-                    <span id="timeline-info">0 / 3시간</span>
+        <!-- VN 메인 영역 (사이드바 + 콘텐츠) -->
+        <div class="vn-main">
+            <!-- 좌측 행동 사이드바 (PREP/NIGHT) -->
+            <aside id="action-sidebar" class="action-sidebar">
+                <div id="sidebar-tabs" class="sidebar-tabs"></div>
+                <div id="sidebar-panel" class="sidebar-panel">
+                    <div id="sidebar-panel-actions" class="sidebar-panel-actions"></div>
                 </div>
-                <div id="timeline-bar" class="timeline-bar">
-                    <div id="timeline-slots" class="timeline-slots"></div>
-                    <div id="timeline-remaining" class="timeline-remaining"></div>
-                </div>
-            </div>
-            <div id="card-list" class="card-list"></div>
-            <div class="action-buttons">
-                <button id="btn-confirm" class="btn btn-primary btn-lg" disabled>행동 확정</button>
-            </div>
-        </div>
+            </aside>
 
-        <!-- 행동 결과 영역 -->
-        <div id="area-action-results" class="game-area" style="display:none">
-            <h2 id="action-results-title">행동 결과</h2>
-            <div id="action-results-list" class="results-list"></div>
-            <button id="btn-after-results" class="btn btn-primary btn-lg">다음</button>
-        </div>
-
-        <!-- 영업 영역 -->
-        <div id="area-business" class="game-area" style="display:none">
-            <div class="business-container">
-                <div class="business-header">
-                    <div class="biz-clock">
-                        <span class="biz-clock-icon">🕐</span>
-                        <span id="biz-time">10:00</span>
+            <!-- VN 콘텐츠 -->
+            <div class="vn-content">
+                <!-- VN 스테이지: 배경 + 캐릭터 -->
+                <div id="vn-stage" class="vn-stage">
+                    <div id="vn-scene-bg" class="vn-scene-bg"></div>
+                    <div id="vn-scene-overlay" class="vn-scene-overlay"></div>
+                    <div id="vn-characters" class="vn-characters"></div>
+                    <div id="vn-biz-overlay" class="vn-biz-overlay" style="display:none">
+                        <div class="biz-clock-vn"><span id="biz-time">10:00</span></div>
+                        <div class="biz-stats-vn">
+                            <span>고객 <strong id="biz-customers">0</strong></span>
+                            <span>매출 <strong id="biz-revenue">₩0</strong></span>
+                            <span>준비 <strong id="biz-prepared">0</strong></span>
+                        </div>
+                        <div class="biz-progress-vn"><div id="biz-progress-bar" class="biz-progress-bar-vn"></div></div>
                     </div>
-                    <div class="biz-stats">
-                        <div class="biz-stat">
-                            <span class="biz-label">고객</span>
-                            <span id="biz-customers" class="biz-value">0</span>
-                        </div>
-                        <div class="biz-stat">
-                            <span class="biz-label">매출</span>
-                            <span id="biz-revenue" class="biz-value">₩0</span>
-                        </div>
-                        <div class="biz-stat">
-                            <span class="biz-label">준비량</span>
-                            <span id="biz-prepared" class="biz-value">0</span>
+                    <!-- 중앙 선택지 오버레이 (영업 의사결정 등) -->
+                    <div id="vn-center-overlay" class="vn-center-overlay" style="display:none">
+                        <div class="vn-center-box">
+                            <div id="vn-center-title" class="vn-center-title"></div>
+                            <div id="vn-center-desc" class="vn-center-desc"></div>
+                            <div id="vn-center-choices" class="vn-center-choices"></div>
                         </div>
                     </div>
                 </div>
-                <div class="biz-progress">
-                    <div id="biz-progress-bar" class="biz-progress-bar"></div>
+
+                <!-- VN 대화창 -->
+                <div id="vn-dialogue" class="vn-dialogue">
+                    <div id="vn-speaker" class="vn-speaker"></div>
+                    <div id="vn-text" class="vn-text"></div>
+                    <div id="vn-choices" class="vn-choices" style="display:none"></div>
+                    <div id="vn-continue" class="vn-continue" style="display:none">클릭하여 계속 ▼</div>
                 </div>
-                <div id="biz-customer-area" class="biz-customer-area"></div>
-                <div id="biz-log" class="biz-log"></div>
-            </div>
-        </div>
 
-        <!-- 영업 요약 영역 -->
-        <div id="area-business-summary" class="game-area" style="display:none">
-            <div class="phase-card">
-                <div class="phase-icon">🏪</div>
-                <h2 class="phase-title">영업 종료</h2>
-                <div id="business-summary-body" class="phase-body"></div>
-                <button id="btn-after-business" class="btn btn-primary btn-lg">야간으로</button>
-            </div>
-        </div>
-
-        <!-- 수면 영역 -->
-        <div id="area-sleep" class="game-area" style="display:none">
-            <div class="sleep-container">
-                <div class="sleep-emoji">😴</div>
-                <h2 class="sleep-title">수면 중...</h2>
-                <p id="sleep-info" class="sleep-info">피로가 회복되고 있습니다</p>
-                <button id="btn-next-day" class="btn btn-primary btn-lg">다음 날</button>
+                <!-- VN 타임라인 미니바 (PREP/NIGHT) -->
+                <div id="vn-timeline" class="vn-timeline" style="display:none">
+                    <div class="vn-timeline-header">
+                        <span id="timeline-title">준비 시간표</span>
+                        <span id="timeline-info">0 / 3시간</span>
+                    </div>
+                    <div id="timeline-bar" class="vn-timeline-bar">
+                        <div id="timeline-slots" class="timeline-slots"></div>
+                    </div>
+                    <button id="btn-confirm" class="btn btn-primary" disabled>행동 확정 [Space]</button>
+                </div>
             </div>
         </div>
     </div>
@@ -235,24 +224,21 @@
         </div>
     </div>
 
-    <!-- 의사결정 모달 -->
-    <div id="modal-decision" class="modal" style="display:none">
-        <div class="modal-content decision-card">
-            <h3 id="decision-title"></h3>
-            <p id="decision-desc" class="decision-desc"></p>
-            <div class="decision-choices">
-                <button id="btn-choice-a" class="btn btn-primary btn-lg decision-btn"></button>
-                <button id="btn-choice-b" class="btn btn-lg decision-btn"></button>
-            </div>
-        </div>
-    </div>
+    <!-- BGM -->
+    <audio id="bgm" loop preload="auto">
+        <source src="bgm/main.mp3" type="audio/mpeg">
+    </audio>
 
-    <script src="js/api.js"></script>
-    <script src="js/state.js"></script>
-    <script src="js/dashboard.js"></script>
-    <script src="js/timeline.js"></script>
-    <script src="js/phase-cards.js"></script>
-    <script src="js/business.js"></script>
-    <script src="js/app.js"></script>
+    <script src="js/sprites.js?v=3"></script>
+    <script src="js/sfx.js?v=3"></script>
+    <script src="js/api.js?v=3"></script>
+    <script src="js/state.js?v=3"></script>
+    <script src="js/vn-narration.js?v=3"></script>
+    <script src="js/vn.js?v=3"></script>
+    <script src="js/dashboard.js?v=3"></script>
+    <script src="js/timeline.js?v=3"></script>
+    <script src="js/phase-cards.js?v=3"></script>
+    <script src="js/business.js?v=3"></script>
+    <script src="js/app.js?v=3"></script>
 </body>
 </html>
